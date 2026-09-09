@@ -88,6 +88,14 @@ class VolumeTier(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertIn("allowance", findings[0].note)
 
+    def test_both_notes_appear_when_both_are_true(self):
+        """The second used to overwrite the first."""
+        text = "Item,Quantity,Net price\nA,10,0.00\nA,100,5.00\n"
+        findings = check(run(text), "volume-tier").findings
+        self.assertEqual(len(findings), 1)
+        self.assertIn("no column names a unit price", findings[0].note)
+        self.assertIn("allowance", findings[0].note)
+
     def test_it_does_not_run_without_a_quantity(self):
         run_result = check(run("SKU,Unit price\nA,10.00\nB,9.00\n"), "volume-tier")
         self.assertFalse(run_result.ran)

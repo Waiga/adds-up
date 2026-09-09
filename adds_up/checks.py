@@ -248,9 +248,11 @@ def volume_tier(reader: Reader) -> CheckRun:
                 f"{price.label} {high_parts[0].text}"
                 + (f" + {adjustment.label} {high_parts[1].text}" if high_parts[1] else ""),
             ]
-            note = ""
+            # Both notes can be true of one finding, so they are collected
+            # rather than assigned: the second used to overwrite the first.
+            notes = []
             if price.role != "unit_price":
-                note = (
+                notes.append(
                     f"'{price.label}' was read as the price because no column names a "
                     "unit price. Whether it holds the price of one unit or the total "
                     "for the whole quantity is not something this document states"
@@ -260,11 +262,12 @@ def volume_tier(reader: Reader) -> CheckRun:
             # missed by an earlier version of this rule, so the one finding in
             # the audit sample that most needed the note did not carry it.
             if low_parts[0].value == 0:
-                note = (
+                notes.append(
                     "the smaller band is priced at zero, which a price list often "
                     "uses for an allowance included in a fixed charge rather than "
                     "for a price of nothing"
                 )
+            note = "; also, ".join(notes)
             findings.append(
                 Finding(
                     check=name,
