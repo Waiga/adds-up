@@ -118,6 +118,24 @@ class ReadingCsv(unittest.TestCase):
         path = temp("p.csv", "SKU,Price\nA,10.00\n")
         self.assertIsNone(read(path)[0].rows[0][1].format_decimals)
 
+    def test_a_cell_larger_than_the_csv_default_limit_is_read(self):
+        """`csv` raises above 128 kB, and hospital footnotes are paragraphs.
+
+        Three of the 200 files in the reference corpus died on this — the
+        crash was inside `csv.reader`, so the tool reported neither a finding
+        nor a readable error, and the measurement counted them as crashes.
+        """
+        import csv as csv_module
+
+        before = csv_module.field_size_limit()
+        big = "x" * 200_000
+        path = temp("p.csv", f'SKU,Notes,Price\nA,"{big}",10.00\nB,"{big}",9.00\n')
+        table = read(path)[0]
+        self.assertEqual(len(table.rows), 2)
+        self.assertEqual(len(table.rows[0][1].text), 200_000)
+        # The limit is process-wide, and a library must not leave it changed.
+        self.assertEqual(csv_module.field_size_limit(), before)
+
     def test_an_unreadable_suffix_says_what_it_reads(self):
         path = temp("p.pdf", "not really a pdf")
         with self.assertRaises(UnreadableFile) as caught:

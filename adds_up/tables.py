@@ -222,15 +222,33 @@ def find_header(grid: list[list[str]], score=None) -> tuple[int, str]:
     )
 
 
+#: How large a single cell may be. ``csv`` defaults to 128 kB and raises on
+#: anything larger, which killed three of the 200 files in the reference
+#: corpus outright: a hospital's footnote column holds paragraphs. The limit
+#: is raised around the read and put back afterwards, because it is a
+#: process-wide setting and a library has no business leaving it changed.
+LARGEST_CELL = 16 * 1024 * 1024
+
+
 def _read_csv_grid(path: Path) -> list[list[str]]:
-    with path.open("r", newline="", encoding="utf-8-sig", errors="replace") as handle:
-        sample = handle.read(65536)
-        handle.seek(0)
-        try:
-            dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
-        except csv.Error:
-            dialect = csv.excel
-        return [list(row) for row in csv.reader(handle, dialect)]
+    previous = csv.field_size_limit()
+    try:
+        csv.field_size_limit(LARGEST_CELL)
+        with path.open("r", newline="", encoding="utf-8-sig", errors="replace") as handle:
+            sample = handle.read(65536)
+            handle.seek(0)
+            try:
+                dialect = csv.Sniffer().sniff(sample, delimiters=",;\t|")
+            except csv.Error:
+                dialect = csv.excel
+            try:
+                return [list(row) for row in csv.reader(handle, dialect)]
+            except csv.Error as error:
+                raise UnreadableFile(
+                    f"{path.name} could not be read as delimited text: {error}"
+                ) from error
+    finally:
+        csv.field_size_limit(previous)
 
 
 def _column_index(reference: str) -> int:

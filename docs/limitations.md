@@ -195,10 +195,19 @@ benchmark, no index.
 
 Nothing on the analysis path can import a module that opens a connection or
 starts a process. `tests/test_offline.py` reads the package's source and
-refuses one: imports are an allowlist of eleven modules, the process-launching
-parts of `os` are refused by name wherever they appear, the dynamic hatches
-are refused, and any file in the package that is not readable Python source
-fails the suite.
+refuses one: imports are an allowlist of eleven **dotted** names, the
+process-launching parts of `os` are refused wherever they appear, every module
+name an allowed module re-exports is refused as an attribute, `getattr` is
+refused outright, and any file in the package that is not readable Python
+source fails the suite.
+
+Each of those exists because something got past a weaker version. The
+allowlist is dotted because it held the package `xml`, and `xml.sax` resolves
+a system id through `urllib`. Module names are refused as attributes because
+`zipfile` does `import os`, so `zipfile.os` is the real thing. `getattr` is
+refused because the same review assembled `"o"+"s"` and `"sys"+"tem"` from
+fragments and ran a shell command with the suite green. Both proofs of concept
+are tests now.
 
 What it cannot see is **the filesystem**. Reading files is the whole job, so
 `pathlib` and `open` are allowed, and no static read can tell a local path
@@ -206,8 +215,12 @@ from a network one: an SMB or NFS mount, a UNC path or a FUSE filesystem
 reaches the network with no socket call in this package's own source. That is
 a real gap, and it is written down here rather than left to be discovered.
 
-It is also a static read, not a sandbox. It does not run the code, and a name
-assembled at runtime from pieces never appears in the source for it to find.
+It is also a static read, not a sandbox. It does not run the code, and it
+cannot see what a dependency does — which is only safe because there are none.
+Refusing `getattr` closes the obvious route to a name assembled at runtime,
+but not every route: a construction nobody has thought of is by definition not
+on the list, and this guard makes the offline promise expensive to break by
+accident rather than impossible to break on purpose.
 
 ## Scope
 
