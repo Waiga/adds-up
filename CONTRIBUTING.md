@@ -79,7 +79,8 @@ Harder, and the bar is the same as the existing seven:
 - It states what two rows say, and passes no judgement on either.
 - It declares the roles it needs and does not run without them.
 - It can be measured against a real corpus, or the README says plainly that it
-  cannot — as it currently does for two of the seven.
+  cannot — as it currently does for two of the seven checks and for half of a
+  third.
 
 ## Reporting a wrong finding
 
