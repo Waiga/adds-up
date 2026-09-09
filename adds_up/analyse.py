@@ -43,7 +43,19 @@ def analyse(
 ) -> Result:
     skip = skip or set()
     result = Result(path=str(path))
-    for table in tables.read(path, sheet=sheet, header_row=header_row):
+
+    def names_recognised(row: list[str]) -> int:
+        """How many of a candidate header row's labels this tool has a name for.
+
+        This is what settles a file with both a title block above the header
+        and a sub-header below it. It reads names, never contents, so it does
+        not weaken the rule that a column's role comes from what it is called.
+        """
+        return sum(1 for column in classify(row, overrides) if column.role)
+
+    for table in tables.read(
+        path, sheet=sheet, header_row=header_row, score=names_recognised
+    ):
         columns = classify(table.header, overrides)
         conventions, reasons = _conventions(table, columns)
         table_result = TableResult(

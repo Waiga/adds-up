@@ -218,6 +218,7 @@ def volume_tier(reader: Reader) -> CheckRun:
     qualifiers = reader.by_role("qualifier")
     findings: list[Finding] = []
     set_aside: list[str] = []
+    compared = 0
     for key, (indices, shown) in _groups(reader, item, qualifiers).items():
         if len(indices) < 2:
             continue
@@ -225,14 +226,15 @@ def volume_tier(reader: Reader) -> CheckRun:
         if blanks:
             set_aside.append(
                 f"{len(blanks)} row(s) in '{shown or reader.sheet}' leave "
-                f"'{quantity.label}' blank in a group that has more than one such row, "
-                "so where they sit in the order is not established"
+                f"'{quantity.label}' blank somewhere other than a single last "
+                "row, so where they sit in the order is not established"
             )
         for lower, higher in zip(ordered, ordered[1:]):
             low_price, low_parts = _price_of(reader, lower, price, adjustment)
             high_price, high_parts = _price_of(reader, higher, price, adjustment)
             if low_price is None or high_price is None:
                 continue
+            compared += 1
             if high_price <= low_price:
                 continue
             low_qty = reader.text(lower, quantity).strip() or "(no upper bound printed)"
@@ -276,8 +278,11 @@ def volume_tier(reader: Reader) -> CheckRun:
                     note=note,
                 )
             )
-    run = CheckRun(name, True, f"read '{quantity.label}' against '{price.label}'", findings)
+    run = CheckRun(
+        name, True, f"read '{quantity.label}' against '{price.label}'", findings
+    )
     run.set_aside = set_aside
+    run.comparisons = compared
     return run
 
 
@@ -297,6 +302,7 @@ def discount_tier(reader: Reader) -> CheckRun:
     item = reader.first("item")
     qualifiers = reader.by_role("qualifier")
     findings: list[Finding] = []
+    compared = 0
     for key, (indices, shown) in _groups(reader, item, qualifiers).items():
         if len(indices) < 2:
             continue
@@ -306,6 +312,7 @@ def discount_tier(reader: Reader) -> CheckRun:
             high = reader.number(higher, discount)
             if low is None or high is None:
                 continue
+            compared += 1
             if high.value >= low.value:
                 continue
             what = f"'{shown}' " if shown else ""
@@ -328,7 +335,11 @@ def discount_tier(reader: Reader) -> CheckRun:
                     ),
                 )
             )
-    return CheckRun(name, True, f"read '{quantity.label}' against '{discount.label}'", findings)
+    run = CheckRun(
+        name, True, f"read '{quantity.label}' against '{discount.label}'", findings
+    )
+    run.comparisons = compared
+    return run
 
 
 def _split_components(text: str) -> list[str]:
@@ -365,6 +376,7 @@ def bundle_above_parts(reader: Reader) -> CheckRun:
 
     findings: list[Finding] = []
     set_aside: list[str] = []
+    compared = 0
     for index in range(len(reader.rows)):
         listed = _split_components(reader.text(index, components))
         if len(listed) < 2:
@@ -391,6 +403,7 @@ def bundle_above_parts(reader: Reader) -> CheckRun:
                 f"{'…' if len(missing) > 3 else ''}), so its total is not established"
             )
             continue
+        compared += 1
         if bundle.value <= total:
             continue
         findings.append(
@@ -405,8 +418,11 @@ def bundle_above_parts(reader: Reader) -> CheckRun:
                 detail=tuple(parts),
             )
         )
-    run = CheckRun(name, True, f"read '{components.label}' against '{price.label}'", findings)
+    run = CheckRun(
+        name, True, f"read '{components.label}' against '{price.label}'", findings
+    )
     run.set_aside = set_aside
+    run.comparisons = compared
     return run
 
 
@@ -471,30 +487,32 @@ def stated_discount(reader: Reader) -> CheckRun:
     net_by_family = _families(nets)
     list_by_family = _families(listed)
     findings: list[Finding] = []
-    pairs: list[tuple[Column, Column, Column, bool]] = []
+    compared = 0
+    pairs = []
     for percent_column, is_discount in [(c, True) for c in discounts] + [
         (c, False) for c in shares
     ]:
         family_nets = net_by_family.get(percent_column.family) or nets
         family_lists = list_by_family.get(percent_column.family) or listed
-        pairs.append((
-            _nearest(percent_column, family_lists),
-            _nearest(percent_column, family_nets),
-            percent_column,
-            is_discount,
-        ))
-
-    if not pairs:
-        return CheckRun(name, False, "no percentage column could be paired with a price")
+        pairs.append((family_lists, family_nets, percent_column, is_discount))
 
     usable = []
     refused = []
-    for pair in pairs:
-        bad = [c for c in pair[:3] if reader.conventions.get(c.index) is None]
-        if bad:
-            refused.append(reader.unreadable(bad[0]))
+    for candidate_lists, candidate_nets, percent_column, is_discount in pairs:
+        readable_lists = [
+            c for c in candidate_lists if reader.conventions.get(c.index) is not None
+        ]
+        readable_nets = [
+            c for c in candidate_nets if reader.conventions.get(c.index) is not None
+        ]
+        if reader.conventions.get(percent_column.index) is None:
+            refused.append(reader.unreadable(percent_column))
+        elif not readable_lists:
+            refused.append(reader.unreadable(candidate_lists[0]))
+        elif not readable_nets:
+            refused.append(reader.unreadable(candidate_nets[0]))
         else:
-            usable.append(pair)
+            usable.append((readable_lists, readable_nets, percent_column, is_discount))
     if not usable:
         # A wide file can carry hundreds of payer blocks and have every one of
         # them empty. That is a check that could not run, and it says which
@@ -502,32 +520,65 @@ def stated_discount(reader: Reader) -> CheckRun:
         return CheckRun(name, False, refused[0] if refused else
                         "no percentage column could be paired with a price")
 
-    for list_column, net_column, percent_column, is_discount in usable:
+    for candidate_lists, candidate_nets, percent_column, is_discount in usable:
+        chosen_list = _nearest(percent_column, candidate_lists)
+        chosen_net = _nearest(percent_column, candidate_nets)
         for index in range(len(reader.rows)):
-            gross = reader.number(index, list_column)
-            net = reader.number(index, net_column)
             percent = reader.number(index, percent_column)
-            if gross is None or net is None or percent is None:
-                continue
-            if gross.value == 0:
+            if percent is None:
                 continue
             share = (
                 (Decimal(100) - percent.value) if is_discount else percent.value
             ) / Decimal(100)
-            implied = gross.value * share
-            # The printed values each stand for a range. The tolerance is what
-            # those ranges allow, not a number somebody chose.
-            tolerance = (
-                net.tolerance()
-                + gross.tolerance() * abs(share)
-                + abs(gross.value) * percent.tolerance() / Decimal(100)
-            )
-            if abs(implied - net.value) <= tolerance:
+
+            # Every candidate pair is tried, and a finding is reported only
+            # when NONE of them reconciles. Binding to the nearest name alone
+            # reported a contradiction in a document that held a perfectly
+            # consistent reading two columns to the right, and reordering the
+            # two columns made the finding disappear.
+            reconciled = False
+            attempted = None
+            for list_column in candidate_lists:
+                gross = reader.number(index, list_column)
+                if gross is None or gross.value == 0:
+                    continue
+                implied = gross.value * share
+                for net_column in candidate_nets:
+                    net = reader.number(index, net_column)
+                    if net is None:
+                        continue
+                    tolerance = (
+                        net.tolerance()
+                        + gross.tolerance() * abs(share)
+                        + abs(gross.value) * percent.tolerance() / Decimal(100)
+                    )
+                    if attempted is None or (
+                        list_column is chosen_list and net_column is chosen_net
+                    ):
+                        attempted = (gross, net, implied, tolerance,
+                                     list_column, net_column)
+                    if abs(implied - net.value) <= tolerance:
+                        reconciled = True
+                        break
+                if reconciled:
+                    break
+            if attempted is None:
                 continue
+            compared += 1
+            if reconciled:
+                continue
+            gross, net, implied, tolerance, list_column, net_column = attempted
             reading = (
                 f"{percent.text} off {gross.text}" if is_discount
                 else f"{percent.text} of {gross.text}"
             )
+            tried = ""
+            if len(candidate_lists) > 1 or len(candidate_nets) > 1:
+                tried = (
+                    f"no pairing of the {len(candidate_lists)} list price and "
+                    f"{len(candidate_nets)} net price column(s) in this row "
+                    "reconciles"
+                )
             findings.append(
                 Finding(
                     check=name,
@@ -541,13 +592,16 @@ def stated_discount(reader: Reader) -> CheckRun:
                         reader.place(index, percent_column),
                         reader.place(index, net_column),
                     ),
-                    detail=(
-                        f"{list_column.label} {gross.text}",
-                        f"{percent_column.label} {percent.text}"
-                        + ("  (read as a discount off the list price)" if is_discount
-                           else "  (read as a percentage of the list price)"),
-                        f"{net_column.label} {net.text}",
-                        f"allowed for rounding: ±{tolerance.normalize()}",
+                    detail=tuple(
+                        x for x in (
+                            f"{list_column.label} {gross.text}",
+                            f"{percent_column.label} {percent.text}"
+                            + ("  (read as a discount off the list price)" if is_discount
+                               else "  (read as a percentage of the list price)"),
+                            f"{net_column.label} {net.text}",
+                            f"allowed for rounding: ±{tolerance.normalize()}",
+                            tried,
+                        ) if x
                     ),
                 )
             )
@@ -558,6 +612,7 @@ def stated_discount(reader: Reader) -> CheckRun:
         findings,
     )
     run.set_aside = refused
+    run.comparisons = compared
     return run
 
 
@@ -588,6 +643,7 @@ def two_prices(reader: Reader) -> CheckRun:
     )
     seen: dict[tuple, tuple[int, Decimal, str]] = {}
     findings: list[Finding] = []
+    compared = 0
     for index in range(len(reader.rows)):
         key_item = reader.text(index, item).strip()
         if not key_item:
@@ -602,6 +658,7 @@ def two_prices(reader: Reader) -> CheckRun:
             seen[key] = (index, printed.value, printed.text)
             continue
         first_index, first_value, first_text = seen[key]
+        compared += 1
         if first_value == printed.value:
             continue
         told_apart = ", ".join(
@@ -609,6 +666,9 @@ def two_prices(reader: Reader) -> CheckRun:
             for column in identity
             if reader.text(index, column).strip()
         )
+        # Never "no column tells them apart" — a column this tool has no name
+        # for may well tell them apart, and saying otherwise states as fact
+        # something the tool cannot know.
         findings.append(
             Finding(
                 check=name,
@@ -623,16 +683,19 @@ def two_prices(reader: Reader) -> CheckRun:
                 ),
                 detail=(
                     (f"the two rows agree on: {told_apart}" if told_apart
-                     else "no other column in this table tells the two rows apart"),
+                     else "no other column this tool recognises tells the two "
+                          "rows apart; one it does not recognise may"),
                 ),
             )
         )
-    return CheckRun(
+    run = CheckRun(
         name, True,
         f"read '{item.label}' against '{price.label}'"
         + (f", holding {len(identity)} other column(s) equal" if identity else ""),
         findings,
     )
+    run.comparisons = compared
+    return run
 
 
 def inverted_range(reader: Reader) -> CheckRun:
@@ -652,6 +715,7 @@ def inverted_range(reader: Reader) -> CheckRun:
 
     findings: list[Finding] = []
     refused: list[str] = []
+    compared = 0
     for low, high in pairs:
         bad = [c for c in (low, high) if reader.conventions.get(c.index) is None]
         if bad:
@@ -662,6 +726,7 @@ def inverted_range(reader: Reader) -> CheckRun:
             top = reader.number(index, high)
             if bottom is None or top is None:
                 continue
+            compared += 1
             if bottom.value <= top.value:
                 continue
             findings.append(
@@ -685,6 +750,7 @@ def inverted_range(reader: Reader) -> CheckRun:
         findings,
     )
     run.set_aside = refused
+    run.comparisons = compared
     return run
 
 

@@ -56,13 +56,40 @@ class ExitCodes(unittest.TestCase):
             argv += ["--skip", name]
         code, out, err = call(*argv)
         self.assertEqual(code, 2)
-        self.assertIn("nothing was compared", err)
+        self.assertIn("no two numbers were compared", err)
 
     def test_a_file_no_check_could_read_is_two(self):
         """Two columns of prose. Nothing was compared, so this is not clean."""
         code, _, err = call(str(temp("a.csv", "Notes,Comment\nhello,world\n")))
         self.assertEqual(code, 2)
-        self.assertIn("nothing was compared", err)
+        self.assertIn("no two numbers were compared", err)
+
+    def test_a_text_only_check_running_does_not_earn_a_clean_result(self):
+        """The hole a review found, kept as a regression.
+
+        This file has a genuine inverted tier. Its price column is headed
+        `Tariff amount payable`, which the vocabulary does not know, so no
+        arithmetic check can run — but `unit-mismatch` needs no numbers, finds
+        `UOM` and `SKU`, reports that it ran, and finds nothing. On the old
+        gate that was exit 0: a clean result over a price list in which
+        nothing was compared.
+        """
+        text = (
+            "SKU,Quantity,UOM,Tariff amount payable\n"
+            "W-1,1,each,9.00\n"
+            "W-1,1000,each,50.00\n"
+        )
+        code, out, err = call(str(temp("a.csv", text)))
+        self.assertEqual(code, 2)
+        self.assertIn("no two numbers were compared", err)
+        self.assertIn("did any arithmetic", err)
+        self.assertIn("ran      unit-mismatch", out)
+
+    def test_a_check_that_ran_but_compared_nothing_is_two(self):
+        """One row per item is a check with nothing to compare."""
+        code, _, err = call(str(temp("a.csv", "SKU,Quantity,Unit price\nA,1,10.00\n")))
+        self.assertEqual(code, 2)
+        self.assertIn("no two numbers were compared", err)
 
     def test_an_unknown_check_name_is_two(self):
         code, _, err = call(str(temp("a.csv", CLEAN)), "--skip", "wibble")
@@ -71,6 +98,11 @@ class ExitCodes(unittest.TestCase):
 
 
 class Output(unittest.TestCase):
+    def test_the_report_says_how_many_numbers_were_compared(self):
+        _, out, _ = call(str(temp("a.csv", CLEAN)))
+        self.assertIn("pair(s) of numbers", out)
+        self.assertIn("comparison(s)", out)
+
     def test_the_report_names_the_checks_that_did_not_run(self):
         _, out, _ = call(str(temp("a.csv", CLEAN)))
         self.assertIn("DID NOT RUN", out)
@@ -90,7 +122,7 @@ class Output(unittest.TestCase):
 
     def test_markdown_has_the_ran_table(self):
         _, out, _ = call(str(temp("a.csv", DIRTY)), "--format", "markdown")
-        self.assertIn("| check | ran | findings | why |", out)
+        self.assertIn("| check | ran | comparisons | findings | why |", out)
 
     def test_skipping_says_it_was_skipped_rather_than_silently_passing(self):
         _, out, _ = call(str(temp("a.csv", DIRTY)), "--skip", "volume-tier")

@@ -1,9 +1,17 @@
 """The command line.
 
 Exit codes: ``0`` nothing found, ``1`` at least one finding, ``2`` could not
-run. A file that did not parse exits 2, and so does a run in which no check
-ran at all — a green result over a price list nothing was compared in is the
-one outcome this tool exists not to produce.
+run. A file that did not parse exits 2, and so does a run in which **no two
+numbers were compared** — whether because every check was switched off, or
+because none could find its columns, or because the columns it found were
+empty.
+
+That gate is on comparisons and not on whether a check reported ``ran``,
+because a review found the difference mattered. ``unit-mismatch`` needs no
+numbers at all, so a price list with a real inverted tier in it, whose price
+column had a heading this tool does not know, exited 0 on the strength of its
+units matching. A green result over a price list nothing was compared in is
+the one outcome this tool exists not to produce.
 """
 
 from __future__ import annotations
@@ -149,10 +157,17 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print(report.text(result, __version__), end="")
 
-    if not result.any_check_ran:
+    if result.comparisons == 0:
+        ran = [c.name for t in result.tables for c in t.checks if c.ran]
         print(
-            "adds-up: no check ran, so nothing was compared. This is not a "
-            "clean result.",
+            "adds-up: no two numbers were compared, so this is not a clean "
+            "result. "
+            + (
+                f"{len(ran)} check(s) reported that they ran, but none of them "
+                "did any arithmetic. "
+                if ran else ""
+            )
+            + "See the CHECKS block for what each one was looking for.",
             file=sys.stderr,
         )
         return 2

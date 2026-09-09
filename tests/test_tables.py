@@ -52,6 +52,41 @@ class HeaderRow(unittest.TestCase):
         index, _ = find_header(grid)
         self.assertEqual(index, 0)
 
+    def test_a_sub_header_below_the_real_one_does_not_steal_the_slot(self):
+        """A units row or a category banner is header-shaped too.
+
+        Before the scorer, the last header-shaped row won unconditionally and
+        this file's real header was demoted to a title block.
+        """
+        grid = [
+            ["SKU", "Quantity", "Unit price"],
+            ["Standard range", "Bulk range", "Notes"],
+            ["W-1", "1", "9.00"],
+            ["W-1", "1000", "50.00"],
+        ]
+        known = {"sku", "quantity", "unit price"}
+        score = lambda row: sum(1 for c in row if c.strip().casefold() in known)
+        index, why = find_header(grid, score)
+        self.assertEqual(index, 0)
+        self.assertIn("names the most columns", why)
+
+    def test_a_title_block_above_still_wins_when_it_names_less(self):
+        """The published-file shape: metadata rows, then the real header."""
+        grid = [
+            ["hospital_name", "last_updated_on", "version"],
+            ["A Hospital", "7/1/2026", "3.0.0"],
+            ["description", "code", "price"],
+            ["X", "1", "10.00"],
+        ]
+        known = {"description", "code", "price"}
+        score = lambda row: sum(1 for c in row if c.strip().casefold() in known)
+        index, _ = find_header(grid, score)
+        self.assertEqual(index, 2)
+
+    def test_without_a_scorer_the_last_candidate_still_wins(self):
+        grid = [["A", "B"], ["C", "D"], ["1", "2"]]
+        self.assertEqual(find_header(grid)[0], 1)
+
     def test_when_nothing_looks_like_a_header_it_says_so(self):
         index, why = find_header([["1", "2"], ["3", "4"]])
         self.assertEqual(index, 0)
@@ -192,6 +227,23 @@ class ReadingXlsx(unittest.TestCase):
         finally:
             tables_module.LARGEST_PART = original
         self.assertGreater(info.file_size, 0)
+
+    def test_a_corrupt_part_is_refused_rather_than_raising(self):
+        """A zip checks its CRC when the part is unpacked, not when it opens.
+
+        A truncated upload used to escape as a `zipfile.BadZipFile` traceback
+        and exit 1 — the code that means findings were reported.
+        """
+        path = self.directory / "badcrc.xlsx"
+        write_xlsx(path, "Sheet1", [["SKU", "Price"], ["A", 10.0]])
+        raw = bytearray(path.read_bytes())
+        # Corrupt the compressed bytes of the worksheet without touching the
+        # headers, so the failure happens at decompression time.
+        marker = raw.find(b"sheet1.xml")
+        raw[marker + 40: marker + 60] = b"\x00" * 20
+        path.write_bytes(bytes(raw))
+        with self.assertRaises(UnreadableFile):
+            read(path)
 
     def test_an_empty_workbook_is_refused(self):
         path = self.directory / "empty.xlsx"

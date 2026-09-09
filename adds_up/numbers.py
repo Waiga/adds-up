@@ -32,7 +32,10 @@ CURRENCY_SYMBOLS = {
     "$": "USD", "US$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY",
     "₹": "INR", "Rs": "INR", "₩": "KRW", "R$": "BRL", "CHF": "CHF",
     "kr": "SEK", "zł": "PLN", "₽": "RUB", "A$": "AUD", "C$": "CAD",
-    "NZ$": "NZD", "HK$": "HKD", "S$": "SGD", "₺": "TRY", "R": "ZAR",
+    "NZ$": "NZD", "HK$": "HKD", "S$": "SGD", "₺": "TRY",
+    # A bare "R" is deliberately absent. It would read "100R" as 100 South
+    # African rand, and one letter is not enough evidence for that. "ZAR"
+    # below is.
 }
 
 #: Three-letter codes accepted when they appear beside a number or alone in a

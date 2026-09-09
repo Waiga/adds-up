@@ -76,7 +76,21 @@ def _part(archive: zipfile.ZipFile, name: str) -> bytes:
             f"{info.file_size / (1 << 20):.0f} MB once unpacked, which this tool "
             "will not read"
         )
-    data = archive.read(name)
+    try:
+        data = archive.read(name)
+    except Exception as error:  # noqa: BLE001
+        # Deliberately broad, and only around this one call. A zip's CRC is
+        # checked when a part is decompressed, not when the archive is opened,
+        # so a truncated or corrupted upload fails here and not earlier — and
+        # it fails with `zlib.error`, which is neither an `OSError` nor a
+        # `zipfile.BadZipFile`. Catching the two obvious types left a
+        # traceback and exit 1, the code that means findings were reported.
+        # Every way of failing to unpack a part means the same thing to a
+        # reader: this file cannot be read.
+        raise UnreadableFile(
+            f"{name} in this .xlsx could not be unpacked: "
+            f"{type(error).__name__}: {error}"
+        ) from error
     head = data[:4096].lstrip()
     if b"<!DOCTYPE" in head or b"<!ENTITY" in data[:65536]:
         raise UnreadableFile(
@@ -149,14 +163,28 @@ def _looks_like_a_header(row: list[str]) -> bool:
     return True
 
 
-def find_header(grid: list[list[str]]) -> tuple[int, str]:
+def find_header(grid: list[list[str]], score=None) -> tuple[int, str]:
     """Choose the header row, and say why in a sentence the report can print.
 
-    The last header-shaped row inside the search depth that has data under it,
-    because a price list's title block is header-shaped too and sits above the
-    real one.
+    Two shapes fight over this slot and neither can be told from the other by
+    looking at one row.
+
+    A published file often has a **title block above** the header — the CMS
+    standard-charges template puts metadata names on row 1, metadata values on
+    row 2 and the real column names on row 3, and all three look like headers.
+    Taking the last candidate handles that, and it is what 95 of 99 files in
+    the reference corpus need.
+
+    But a price list just as often has a **sub-header below** — a units row, a
+    category banner, a second language — and there the last candidate is the
+    wrong one. A review demonstrated it stealing the slot from the real
+    header.
+
+    So when a ``score`` is given, the candidate that names the most things
+    wins, and the last candidate only breaks a tie. The score is still a
+    function of *names*: it is the column vocabulary, applied to the row.
     """
-    best = None
+    candidates = []
     depth = min(len(grid), HEADER_SEARCH_DEPTH)
     for index in range(depth):
         if not _looks_like_a_header(grid[index]):
@@ -164,12 +192,23 @@ def find_header(grid: list[list[str]]) -> tuple[int, str]:
         following = grid[index + 1: index + 4]
         if not any(sum(1 for c in row if not _blank(c)) >= 2 for row in following):
             continue
-        best = index
-    if best is None:
+        candidates.append(index)
+    if not candidates:
         return 0, (
             "no row in the first "
             f"{depth} looked like a header, so the first row was used as one"
         )
+    if score is None:
+        best = candidates[-1]
+    else:
+        scored = [(score(grid[index]), index) for index in candidates]
+        best = max(scored)[1]
+        if len(candidates) > 1 and max(scored)[0] > 0:
+            return best, (
+                f"row {best + 1}, of {len(candidates)} header-shaped row(s) in "
+                f"the first {depth}, because it names the most columns this "
+                f"tool recognises ({max(scored)[0]})"
+            )
     if best == 0:
         return 0, "the first row"
     return best, (
@@ -332,7 +371,12 @@ def _read_xlsx_sheet(
     return grid
 
 
-def read(path: Path, sheet: str | None = None, header_row: int | None = None) -> list[Table]:
+def read(
+    path: Path,
+    sheet: str | None = None,
+    header_row: int | None = None,
+    score=None,
+) -> list[Table]:
     """Read every table a file offers.
 
     A CSV is one table. A workbook is one per worksheet, because a price list
@@ -342,7 +386,11 @@ def read(path: Path, sheet: str | None = None, header_row: int | None = None) ->
     suffix = path.suffix.lower()
     if suffix in (".csv", ".tsv", ".txt"):
         grid = _read_csv_grid(path)
-        return [_assemble(path.name, [[Cell(c) for c in row] for row in grid], header_row)]
+        return [
+            _assemble(
+                path.name, [[Cell(c) for c in row] for row in grid], header_row, score
+            )
+        ]
     if suffix in (".xlsx", ".xlsm"):
         try:
             archive = zipfile.ZipFile(path)
@@ -363,7 +411,7 @@ def read(path: Path, sheet: str | None = None, header_row: int | None = None) ->
                     ) from error
                 if not grid:
                     continue
-                tables.append(_assemble(name, grid, header_row))
+                tables.append(_assemble(name, grid, header_row, score))
             if not tables:
                 raise UnreadableFile(f"{path.name} holds no readable worksheet")
             return tables
@@ -373,7 +421,9 @@ def read(path: Path, sheet: str | None = None, header_row: int | None = None) ->
     )
 
 
-def _assemble(name: str, grid: list[list[Cell]], header_row: int | None) -> Table:
+def _assemble(
+    name: str, grid: list[list[Cell]], header_row: int | None, score=None
+) -> Table:
     if not grid:
         raise UnreadableFile(f"{name} is empty")
     text_grid = [[cell.text for cell in row] for row in grid]
@@ -385,7 +435,7 @@ def _assemble(name: str, grid: list[list[Cell]], header_row: int | None) -> Tabl
             )
         reason = f"row {header_row}, because --header-row said so"
     else:
-        index, reason = find_header(text_grid)
+        index, reason = find_header(text_grid, score)
     header = [cell.strip() for cell in text_grid[index]]
     body = grid[index + 1:]
     width = len(header)

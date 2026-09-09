@@ -34,8 +34,10 @@ def text(result: Result, version: str) -> str:
         )
         ran = [c for c in table.checks if c.ran]
         found = sum(len(c.findings) for c in table.checks)
+        compared = sum(c.comparisons for c in table.checks)
         lines.append(
-            f"{len(ran)} of {len(table.checks)} check(s) ran. {found} finding(s)."
+            f"{len(ran)} of {len(table.checks)} check(s) ran, comparing "
+            f"{compared} pair(s) of numbers. {found} finding(s)."
         )
         lines.append("")
 
@@ -58,7 +60,8 @@ def text(result: Result, version: str) -> str:
         for check in table.checks:
             if check.ran:
                 lines.append(
-                    f"  ran      {check.name:<20} {len(check.findings)} finding(s) — {check.reason}"
+                    f"  ran      {check.name:<20} {len(check.findings)} finding(s) "
+                    f"from {check.comparisons} comparison(s) — {check.reason}"
                 )
             else:
                 lines.append(f"  DID NOT RUN {check.name:<17} {check.reason}")
@@ -120,11 +123,12 @@ def markdown(result: Result, version: str) -> str:
             lines.append("")
         lines.append("### Which checks ran")
         lines.append("")
-        lines.append("| check | ran | findings | why |")
-        lines.append("|---|---|---|---|")
+        lines.append("| check | ran | comparisons | findings | why |")
+        lines.append("|---|---|---|---|---|")
         for check in table.checks:
             lines.append(
                 f"| {check.name} | {'yes' if check.ran else '**no**'} | "
+                f"{check.comparisons if check.ran else '—'} | "
                 f"{len(check.findings) if check.ran else '—'} | {check.reason} |"
             )
         lines.append("")
@@ -161,6 +165,7 @@ def as_json(result: Result, version: str) -> str:
                         "name": check.name,
                         "ran": check.ran,
                         "reason": check.reason,
+                        "comparisons": check.comparisons,
                         "set_aside": check.set_aside,
                         "findings": [
                             {
