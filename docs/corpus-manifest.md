@@ -101,8 +101,9 @@ cannot run against it at all, and the measurement records that as six
 **What it is for.** Everything corpus 1 cannot reach:
 `stated-discount`, `two-prices`, `inverted-range` and `unit-mismatch`. Also,
 and just as importantly, **column recognition against headers this project did
-not write**, several hundred of them, from files authored independently by
-different hospitals and different vendors.
+not write** — measured at **8,519 distinct column names** across the 173 CSVs
+in it, from files authored independently by different hospitals and different
+vendors.
 
 **Collected.** 9 September 2026.
 
@@ -166,6 +167,19 @@ in that order. A row is kept when all of the following hold:
    how a current CMS-template file is told from a pre-2022 chargemaster with a
    five-column layout of its own.
 
+**Rule 4 does not check that the file is a CSV, and 27 of the 200 are not.**
+The CMS schema has a JSON form as well as a tabular one, it contains
+`standard_charge` too, and some hospitals publish it from a URL ending `.csv`.
+Those 27 files are in the corpus and are counted in every total here. They are
+the reason the raw column counts are what they are: read as CSV, one of them
+is a single row of up to 1.16 million comma-separated fields, and the 27
+between them account for 6,838,504 of the run's 6,852,483 columns — the other
+13,979 are the 173 real CSVs, holding 8,519 of the 661,590 distinct column
+names. The tool runs no check on any of the 27 and exits `2`, which is the
+right outcome, but the corpus is 173 price lists and 27 documents in another
+format, and `measure_hospital.py` now reports both splits so neither figure
+can be quoted for the other.
+
 Collection stops at the target count. Everything rejected is counted by
 reason, in `_index.json`. For the 200 files these numbers come from, the
 counts were: 5,023 index rows, of which 865 were reached before the target was
@@ -210,7 +224,8 @@ several thousand.
 ```bash
 python3 tools/fetch_hospital.py corpus/ --count 200 --cap-mb 40
 python3 tools/measure_hospital.py corpus/
-python3 tools/measure_hospital.py corpus/ --samples audit.json
+python3 tools/measure_hospital.py corpus/ --samples audit.json \
+    --per-document concentration.json
 ```
 
 `corpus/_index.json` records, for every file kept: the CCN, the state, the
@@ -393,21 +408,34 @@ than a corpus that fires it by accident.
 Findings were read by hand against the file they came from. Each sample is
 reproducible from the corpus above.
 
+The draw takes one finding per document and caps at 30, so a sample smaller
+than 30 is not a shortfall: it is every document in the corpus that produced
+the finding at all.
+
 | Check | Corpus | Sample | What was read |
 |---|---|---|---|
 | volume-tier | tariffs | 30 findings, seed 11, one per tariff | the tier table's own printed rates and adjusters |
-| stated-discount | hospitals | 30 findings, seed 11, one per file | the gross, percentage and dollar printed on that row |
-| two-prices | hospitals | 30 findings, seed 11, one per file | the two rows, and every column that might tell them apart |
-| inverted-range | hospitals | 30 findings, seed 11, one per file | the row's own printed minimum and maximum |
-| unit-mismatch | hospitals | 30 findings, seed 11, one per file | the rows, and the unit printed on each |
+| stated-discount | hospitals | **17** — all 17 documents with a finding | the gross, percentage and dollar printed on that row |
+| two-prices | hospitals | **30** of 52 documents, **plus 2 each from the 5 largest** | the two rows, and every column that might tell them apart |
+| inverted-range | hospitals | **5** — all 5 documents with a finding | the row's own printed minimum and maximum |
+| unit-mismatch | hospitals | **14** — all 14 documents with a finding | the rows, and the unit printed on each |
 | discount-tier | — | — | **no corpus exercises it** |
 | bundle-above-parts | — | — | **no corpus exercises it** |
+
+**The extra `two-prices` reads are there because one finding per document is
+the wrong sample when one document makes most of the findings.** The 30 drawn
+documents hold 23.4% of that check's 189,501 findings and four of its five
+largest were not drawn at all, so two findings were read by hand from each of
+the five biggest the draw missed, taking hand coverage to 90.7% of the check's
+findings. `tools/measure_hospital.py --per-document` writes the
+per-file counts that establish this.
 
 Redraw any of them with:
 
 ```bash
 python3 tools/measure_corpus.py usurdb.csv.gz --samples audit.json
-python3 tools/measure_hospital.py corpus/ --samples hospital-audit.json
+python3 tools/measure_hospital.py corpus/ --samples hospital-audit.json \
+    --per-document concentration.json
 ```
 
 The draw is deduplicated by document and seeded at 11, so the same corpus
