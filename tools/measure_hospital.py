@@ -11,8 +11,11 @@ utility-tariff corpus can exercise.
 
 This runs the tool over a directory of them and prints the totals as JSON.
 ``--samples`` draws the hand-audit sample at a fixed seed.
+``--per-document`` writes the findings each file produced, because a total
+across documents does not say whether one file made all of them.
 
-    python3 tools/measure_hospital.py corpus/ --samples audit.json
+    python3 tools/measure_hospital.py corpus/ --samples audit.json \
+        --per-document concentration.json
 
 Unlike the tariff corpus, no reshaping happens here at all: the files go into
 the tool exactly as the hospitals published them, three header rows and all.
@@ -44,6 +47,22 @@ from adds_up.tables import UnreadableFile  # noqa: E402
 VERSION = re.compile(r"v?[23]\.\d+\.\d+")
 
 
+def is_json(path: Path) -> bool:
+    """True when the file is a JSON document, whatever its name says.
+
+    The CMS schema has a JSON form as well as a tabular one, both contain the
+    string ``standard_charge``, and some hospitals publish the JSON one from a
+    URL ending ``.csv``. Read as a CSV, one of those is a single row of over a
+    million comma-separated fields, which swamps every column total in this
+    measurement. Counting them separately is the difference between reporting
+    8,519 distinct column names and reporting 661,590 of which 98.7% never
+    appear in a CSV at all.
+    """
+    with path.open("rb") as handle:
+        head = handle.read(4096).lstrip(b"\xef\xbb\xbf").lstrip()
+    return head[:1] in (b"{", b"[")
+
+
 def measure(directory: Path, sample_size: int, seed: int):
     # Everything the fetch kept, whatever it is called. Matching `*.csv`
     # case-sensitively measured 162 of 200 files and said so nowhere.
@@ -65,6 +84,13 @@ def measure(directory: Path, sample_size: int, seed: int):
         # it delivers. `columns_total` counts instances, which is a different
         # and much larger number.
         "distinct_column_names": 0,
+        # The same three figures over the files that really are CSV. The
+        # combined ones above are dominated by JSON documents named `.csv`.
+        "csv_files": 0,
+        "json_files": 0,
+        "columns_total_csv_only": 0,
+        "columns_with_a_role_csv_only": 0,
+        "distinct_column_names_csv_only": 0,
         "cms_template_versions": Counter(),
         "header_row_chosen": Counter(),
         "roles_found": Counter(),
@@ -84,12 +110,20 @@ def measure(directory: Path, sample_size: int, seed: int):
         "python": "",
         "bytes_total": 0,
     }
+    # Findings per check per file. A total across documents says nothing
+    # about whether it came from all of them or from one, and a published
+    # figure that is really one pathological file has to say so.
+    per_document: dict[str, Counter] = {name: Counter() for name in CHECK_NAMES}
     pool: dict[str, list] = {name: [] for name in CHECK_NAMES}
     pooled: dict[str, set] = {name: set() for name in CHECK_NAMES}
     names: set[str] = set()
 
+    csv_names: set[str] = set()
+
     for number, path in enumerate(files, start=1):
         size = path.stat().st_size
+        tabular = not is_json(path)
+        totals["csv_files" if tabular else "json_files"] += 1
         totals["bytes_total"] += size
         started = time.monotonic()
         # Progress on stderr, so a run that dies part way through says where.
@@ -130,11 +164,17 @@ def measure(directory: Path, sample_size: int, seed: int):
             totals["rows_total"] += table.row_count
             totals["columns_total"] += len(table.columns)
             totals["header_row_chosen"][table.header_row_number] += 1
+            if tabular:
+                totals["columns_total_csv_only"] += len(table.columns)
             for column in table.columns:
                 names.add(column.name.strip())
+                if tabular:
+                    csv_names.add(column.name.strip())
                 if column.role:
                     totals["columns_with_a_role"] += 1
                     totals["roles_found"][column.role] += 1
+                    if tabular:
+                        totals["columns_with_a_role_csv_only"] += 1
             for row in table.preamble:
                 for cell in row:
                     if VERSION.fullmatch(cell.strip()):
@@ -151,6 +191,7 @@ def measure(directory: Path, sample_size: int, seed: int):
                 totals["set_aside"] += len(check.set_aside)
                 if check.findings:
                     totals["documents_with_a_finding"][check.name] += 1
+                    per_document[check.name][path.name] += len(check.findings)
                 for finding in check.findings:
                     totals["findings"][check.name] += 1
                     # Only the first finding per file is kept. The audit draw
@@ -174,6 +215,7 @@ def measure(directory: Path, sample_size: int, seed: int):
         del result
 
     totals["distinct_column_names"] = len(names)
+    totals["distinct_column_names_csv_only"] = len(csv_names)
     totals["cms_template_versions"] = dict(
         totals["cms_template_versions"].most_common()
     )
@@ -207,7 +249,26 @@ def measure(directory: Path, sample_size: int, seed: int):
         # One finding per file, so a single hospital cannot fill the sample.
         unique = sorted(entries, key=lambda e: e["file"])
         samples[name] = rng.sample(unique, min(sample_size, len(unique)))
-    return totals, samples
+
+    concentration = {}
+    for name, counter in per_document.items():
+        if not counter:
+            continue
+        ordered = counter.most_common()
+        total = sum(counter.values())
+        concentration[name] = {
+            "findings": total,
+            "documents": len(ordered),
+            "worst_document": ordered[0][0],
+            "worst_document_findings": ordered[0][1],
+            "worst_document_share": round(ordered[0][1] / total, 4),
+            "top_three_share": round(
+                sum(count for _, count in ordered[:3]) / total, 4
+            ),
+            "median_document_findings": sorted(counter.values())[len(ordered) // 2],
+            "per_document": dict(ordered),
+        }
+    return totals, samples, concentration
 
 
 def main() -> int:
@@ -216,9 +277,16 @@ def main() -> int:
     parser.add_argument("--samples", type=Path)
     parser.add_argument("--sample-size", type=int, default=30)
     parser.add_argument("--seed", type=int, default=11)
+    parser.add_argument(
+        "--per-document",
+        type=Path,
+        help="write findings per check per file, and the concentration in them",
+    )
     args = parser.parse_args()
 
-    totals, samples = measure(args.directory, args.sample_size, args.seed)
+    totals, samples, concentration = measure(
+        args.directory, args.sample_size, args.seed
+    )
     print(json.dumps(totals, indent=2, default=str))
     if args.samples:
         args.samples.write_text(
@@ -227,6 +295,11 @@ def main() -> int:
             encoding="utf-8",
         )
         print(f"\nsamples written to {args.samples}", file=sys.stderr)
+    if args.per_document:
+        args.per_document.write_text(
+            json.dumps(concentration, indent=2, default=str), encoding="utf-8"
+        )
+        print(f"per-document counts written to {args.per_document}", file=sys.stderr)
     return 0
 
 
