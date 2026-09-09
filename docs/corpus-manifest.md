@@ -421,11 +421,16 @@ with `csv.reader`, and prints every column in which the two rows differ:
 python3 tools/audit_hospital.py corpus/ hospital-audit.json
 ```
 
-It sorts each finding into `agree` — the two rows hold the same value in every
-column the tool could read — `derived`, where they differ only in figures
-computed from the price itself, and `distinguished`, where a column the tool
-has no name for holds different values and the document may well be separating
-the two rows.
+For the two checks that state a *pair* of rows, it sorts each finding into
+`agree` — the two rows hold the same value in every column the tool could read
+— `derived`, where they differ only in figures computed from the price itself,
+and `distinguished`, where a column the tool has no name for holds different
+values and the document may well be separating the two rows.
+
+For the two that state a *single* row, it goes back to that row and confirms
+the values the finding quotes are cells in it. That is not the computation the
+check performed; it is the question a reader of the audit is asking, which is
+whether the finding describes the document.
 
 **Only the first of those is a verdict the script can give.** Whether a
 difference *matters* is the judgement, and it is made by a person looking at
