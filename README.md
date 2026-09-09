@@ -10,7 +10,7 @@ $ adds-up examples/volume-tiers.csv
 
 6 row(s) under a header read from row 4, the last header-shaped row above the data; 3 row(s) above it were read as a title block.
 5 of 5 column(s) were given a role.
-3 of 7 check(s) ran. 1 finding(s).
+3 of 7 check(s) ran, comparing 4 pair(s) of numbers. 1 finding(s).
 
 VOLUME-TIER
   a larger quantity priced higher than a smaller one, in the price column named
@@ -21,13 +21,13 @@ VOLUME-TIER
       at volume-tiers.csv!row 6, Unit price, volume-tiers.csv!row 7, Unit price
 
 CHECKS
-  ran      volume-tier          1 finding(s) — read 'Quantity' against 'Unit price'
+  ran      volume-tier          1 finding(s) from 4 comparison(s) — read 'Quantity' against 'Unit price'
   DID NOT RUN discount-tier     no column names a discount percentage
   DID NOT RUN bundle-above-parts no column names the items a bundle is made of, so no composition is stated in this document
   DID NOT RUN stated-discount   no column names a list price
-  ran      two-prices           0 finding(s) — read 'SKU' against 'Unit price', holding 3 other column(s) equal
+  ran      two-prices           0 finding(s) from 0 comparison(s) — read 'SKU' against 'Unit price', holding 3 other column(s) equal
   DID NOT RUN inverted-range    no column names the bottom of a range
-  ran      unit-mismatch        0 finding(s) — read 'Currency' against 'SKU', holding 2 other column(s) equal
+  ran      unit-mismatch        0 finding(s) — read 'Currency' against 'SKU', holding 2 other column(s) equal (compares text, not numbers)
 
   A check that did not run has found nothing because it was not made.
 
@@ -93,11 +93,21 @@ adds-up --list-checks
 adds-up --list-columns                     # every column name it recognises
 ```
 
-Exit codes: `0` nothing found, `1` at least one finding, `2` could not run. A
-file that did not parse exits `2` — and so does a run in which **no check
-ran**, including one with every check switched off. A green result over a
-price list nothing was compared in is the one outcome this tool exists not to
-produce.
+Exit codes: `0` nothing found, `1` at least one finding, `2` could not run.
+
+**Exit 0 requires that two numbers were actually compared.** A file that did
+not parse exits `2`, and so does a run in which nothing was compared — every
+check switched off, no check able to find its columns, or the columns it found
+empty. The report prints the comparison count, so "3 checks ran" and "3 checks
+ran and compared nothing" are never the same line.
+
+That gate is on comparisons rather than on whether a check reported that it
+ran, and the difference is not theoretical: an adversarial review found a
+price list with a real inverted tier in it exiting `0` because its price
+column had a heading the vocabulary did not know, and `unit-mismatch` — which
+needs no numbers at all — had run and found the units consistent. A green
+result over a price list nothing was compared in is the one outcome this tool
+exists not to produce.
 
 ## The seven checks
 
@@ -296,6 +306,48 @@ files. The suite was green throughout.
   1,083 MB published file needed 3.6 GB and 62 seconds. `Cell` now uses
   `__slots__`, which was worth gigabytes; the underlying limit remains and is
   published rather than warned about.
+
+## What an adversarial review found that neither the tests nor the corpus did
+
+The suite was green and both corpora had been measured when a review was
+commissioned specifically to break the tool's stated promises. It broke two.
+
+- **Exit 0 was reachable with no arithmetic done at all.** Described above. It
+  is the most important promise in the tool and it had a hole in it.
+- **The offline guard could be walked past using only allowlisted modules.**
+  The allowlist held the top-level package `xml`, and `xml.sax.parse(url,
+  handler)` resolves a system id through `urllib.request.urlopen` — a working
+  exfiltration path with no socket, no subprocess and no dynamic import
+  anywhere in the source. Separately, `zipfile` does `import os`, so
+  `zipfile.os` is the real `os` module, and
+  `getattr(getattr(zipfile, "o"+"s"), "sys"+"tem")(command)` spawned a shell
+  with the whole suite green. The allowlist is now dotted — `xml.etree` and
+  nothing else under `xml` — every module name an allowed module re-exports is
+  refused as an attribute, and `getattr` is refused outright. Both proofs of
+  concept are regression tests.
+
+Four more, none of which the tests would have caught:
+
+- **A corrupt `.xlsx` exited `1`, not `2`.** A zip verifies a part's CRC when
+  it is unpacked, not when the archive is opened, and the failure arrives as
+  `zlib.error`, which is neither an `OSError` nor a `zipfile.BadZipFile`.
+- **`stated-discount` reported a contradiction in a consistent file.** With
+  two columns both naming a list price, it bound to the nearer name and
+  flagged a row that reconciled perfectly against the other one — and
+  reordering the two columns made the finding vanish. Every candidate pairing
+  is now tried, and a finding needs all of them to fail.
+- **`two-prices` asserted "no other column in this table tells the two rows
+  apart"** about a `Promo` column sitting right there. It now says no column
+  *this tool recognises* does, and that one it does not recognise may.
+- **A sub-header stole the header row.** Taking the last header-shaped row
+  handles a title block above the header, which is what published files
+  usually have; it fails on a units row or category banner below it. The
+  candidate that names the most recognised columns now wins, which handles
+  both.
+
+The review also confirmed what it could not break: no output path passes
+judgement, no check touches a cost, a blank is never read as a zero, and no
+role anywhere is inferred from a column's contents.
 
 ## What it misses
 

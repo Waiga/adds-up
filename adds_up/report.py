@@ -59,9 +59,13 @@ def text(result: Result, version: str) -> str:
         lines.append("CHECKS")
         for check in table.checks:
             if check.ran:
+                counted = (
+                    f"from {check.comparisons} comparison(s) "
+                    if check.comparisons or check.name != "unit-mismatch" else ""
+                )
                 lines.append(
                     f"  ran      {check.name:<20} {len(check.findings)} finding(s) "
-                    f"from {check.comparisons} comparison(s) — {check.reason}"
+                    f"{counted}— {check.reason}"
                 )
             else:
                 lines.append(f"  DID NOT RUN {check.name:<17} {check.reason}")

@@ -819,10 +819,14 @@ def unit_mismatch(reader: Reader) -> CheckRun:
     looked_at = ", ".join(
         f"'{c.label}'" for c in (unit, currency) if c is not None
     )
+    # No `comparisons`: this check compares text, and exit 0 is earned by
+    # arithmetic. Saying so in the reason keeps "0 comparison(s)" from reading
+    # as "did nothing".
     return CheckRun(
         name, True,
         f"read {looked_at} against '{item.label}'"
-        + (f", holding {len(qualifiers)} other column(s) equal" if qualifiers else ""),
+        + (f", holding {len(qualifiers)} other column(s) equal" if qualifiers else "")
+        + " (compares text, not numbers)",
         findings,
     )
 

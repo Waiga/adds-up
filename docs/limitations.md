@@ -50,10 +50,25 @@ can tell.
 A check that did not run has found nothing **because it was not made**.
 
 The report lists every check with `ran` or `DID NOT RUN` and a reason, and the
-JSON keeps them as separate fields. A run in which no check ran at all exits
-`2`, not `0`, and so does a run with every check switched off. A green result
-over a price list nothing was compared in is the single outcome this tool
-exists not to produce.
+JSON keeps them as separate fields.
+
+**And a check that ran is not the same as arithmetic having happened.** Exit 0
+requires that at least one check compared two numbers, and the report prints
+the count. A run with every check switched off exits `2`; so does a run in
+which the checks found their columns and every one of those columns was empty;
+so does a run in which the only check able to run was `unit-mismatch`, which
+compares text and never numbers.
+
+That last case is not hypothetical. A review handed the tool a price list with
+a genuine inverted tier whose price column was headed *Tariff amount payable*
+— a name the vocabulary does not know. No arithmetic check could run.
+`unit-mismatch` found the item and unit columns, reported that it had run,
+found the units consistent, and the tool exited `0`. It now exits `2` and says
+so.
+
+Absence of a column is never reported as a defect in the document. "No column
+names a discount percentage" is a statement about what this tool could read,
+not a criticism of the price list.
 
 Absence of a column is never reported as a defect in the document. "No column
 names a discount percentage" is a statement about what this tool could read,
@@ -163,10 +178,13 @@ benchmark, no index.
 
 ## Where a finding can come from bad input rather than a bad price list
 
-- **A header row chosen wrongly.** The tool takes the last header-shaped row
-  in the first 25 with data under it. A price list with an unusual title block
-  can defeat that; the report always prints which row it used and why, and
-  `--header-row` overrides it.
+- **A header row chosen wrongly.** Among the header-shaped rows in the first
+  25 with data under them, the tool takes the one naming the most columns it
+  recognises, and the last one only breaks a tie. That handles both a title
+  block above the header and a sub-header below it, but a file whose real
+  header uses names the vocabulary does not know will score zero and lose to
+  any row that scores at all. The report always prints which row it used and
+  why, and `--header-row` overrides it.
 - **A merged or multi-block sheet.** A file holding two price lists stacked in
   one sheet will be read as one, and the second block's header row becomes a
   data row.

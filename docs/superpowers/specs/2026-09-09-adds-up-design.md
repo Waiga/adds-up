@@ -143,6 +143,14 @@ which did not, with the reason. A check that did not run must never read as a
 check that found nothing — that is why `ran` and `findings` are separate
 fields, and why the reason is mandatory.
 
+**And `ran` is not what exit 0 is gated on.** A `CheckRun` also carries the
+number of pairs of *numbers* it actually compared, and a run that compared
+none exits 2. The two are different, and an adversarial review found the gap
+between them: `unit-mismatch` needs no numbers at all, so a price list with a
+genuine inverted tier — whose price column had a heading the vocabulary did
+not know — exited 0 because the units were consistent. Three checks had
+"run". Nothing had been compared.
+
 | | needs | reports |
 |---|---|---|
 | **volume-tier** | a quantity and a price | a larger quantity priced higher than a smaller one |
@@ -154,6 +162,19 @@ fields, and why the reason is mandatory.
 | **unit-mismatch** | an item and a unit or currency | one item priced in two units, or two currencies |
 
 ### Decisions inside them worth writing down
+
+**A finding needs every candidate pairing to fail, not the nearest one.**
+Where two columns both name a list price, binding the percentage to the nearer
+name reported a contradiction in a row that reconciled perfectly against the
+other column — and swapping the two columns made the finding disappear. So
+every candidate list price is tried against every candidate net price, and a
+finding is reported only when none of them reconciles. The finding then names
+the pairing it quotes and says how many were tried.
+
+This costs sensitivity: a file with two list prices, one of which happens to
+reconcile by coincidence, is now silent. That is the right way round. A tool
+whose findings depend on column order is not reporting a property of the
+document.
 
 **A percentage has two opposite readings and only its name tells them apart.**
 *20% off* and *pays 20% of* are contradictory instructions, and both are
@@ -241,6 +262,27 @@ block pricing is deliberate and ubiquitous in residential utility tariffs. The
 check reports that a larger band is priced higher, in those words, and the
 README publishes how often that turns out to be policy rather than a mistake.
 
+## Choosing the header row
+
+Two shapes fight over the slot and no single row can be told from the other.
+
+A published file often has a **title block above** the header. The CMS
+standard-charges template puts metadata names on row 1, metadata values on row
+2 and the real column names on row 3, and all three are header-shaped. Taking
+the *last* candidate handles that, and 95 of 99 files in the reference corpus
+need it.
+
+A price list just as often has a **sub-header below** — a units row, a
+category banner, a second language. There the last candidate is the wrong one,
+and a review demonstrated one stealing the slot from the real header, which
+demoted three recognised columns to a title block.
+
+The rule is now: among the header-shaped rows with data under them, the one
+that names the most columns this tool recognises wins, and the last one only
+breaks a tie. The score is a function of *names* — it is the column vocabulary
+applied to a row — so it does not weaken the rule that a role comes from what
+a column is called.
+
 ## Offline boundary
 
 Nothing on the analysis path can import a module that opens a connection or
@@ -253,6 +295,23 @@ contain nothing to parse.
 
 `os` is not on the allowlist at all. Nothing here writes a file, so the
 exception `os` usually needs is not needed either.
+
+**The allowlist is dotted, and that is not fussiness.** An earlier version
+allowed the top-level package `xml`. `xml.sax.parse(url, handler)` resolves a
+system id through `urllib.request.urlopen`, so allowing `xml` allowed a
+working exfiltration path with no socket, no subprocess and no dynamic import
+anywhere in the source — and a review wrote it, dropped it into the package,
+and watched the whole suite stay green. `xml.etree` is what this package uses
+and `xml.etree` is what it may have.
+
+**A module can be reached through another module.** `zipfile` does
+`import os`, so `zipfile.os` is the real `os` module and
+`getattr(getattr(zipfile, "o"+"s"), "sys"+"tem")(command)` spawns a shell with
+no forbidden name anywhere in the source: the attribute names are assembled
+from string fragments. Two things close it — every module name an allowed
+module re-exports is refused as an attribute, and `getattr` is refused
+outright, because this package has no legitimate use for it. Both proofs of
+concept are now tests.
 
 What the guard cannot see is **the filesystem**. Reading files is the whole
 job, so `pathlib` and `open` are allowed, and no static read can tell a local
@@ -276,3 +335,21 @@ found defects a green test suite did not.
 - **The `volume-tier` finding said "per unit"** even when the price column it
   had used was not a unit price, which the document does not state either way.
   It now names the column and says so.
+
+## What the review changed
+
+Separately from the corpus, an adversarial review was commissioned to break
+the seven promises. It broke two — the exit-0 gate and the offline guard, both
+described above — and found four more defects a green suite had not:
+
+- a corrupt `.xlsx` exited 1 rather than 2, because a zip's CRC failure
+  arrives as `zlib.error`, which is neither `OSError` nor `zipfile.BadZipFile`;
+- `stated-discount` bound to one list-price column by name proximity;
+- `two-prices` claimed "no other column in this table tells the two rows
+  apart" about a column it simply had no name for;
+- a sub-header row could steal the header slot.
+
+It could not break the other five promises: no output path passes judgement,
+no check touches a cost, a blank is never read as a zero, no role is inferred
+from contents, and it found no realistic price value that reads wrong rather
+than being refused.
