@@ -27,11 +27,11 @@ reporting on their own: a tier that inverts, a percentage that does not
 reconcile with the two numbers printed either side of it, a minimum above its
 own maximum.
 
-The test `NothingIsJudged` in `tests/test_checks.py` runs a file that trips
-five checks at once and fails if the word *should*, *wrong*, *error*, *margin*,
-*profit*, *overpriced*, *recommend* or a dozen others appears anywhere in any
-finding. It is the only test in the suite that guards a value rather than a
-behaviour, and it is there because the temptation is constant.
+The test `NothingIsJudged` in `tests/test_checks.py` runs a file that produces
+findings from four checks at once and fails if any of seventeen words appears
+in one — *should*, *wrong*, *error*, *margin*, *profit*, *overpriced*,
+*recommend* among them. It is the only test in the suite that guards a value
+rather than a behaviour, and it is there because the temptation is constant.
 
 ## The two things that are actually hard
 
@@ -277,6 +277,26 @@ opinion about pricing psychology, not arithmetic.
 and it is `show-your-work`'s, which already does it against the formula that
 was supposed to compute it. Duplicating it here on values alone would be a
 worse version of an existing tool in the same portfolio.
+
+**Fuzzy matching on column names.** Edit distance would let *Unt Price* and
+*Discnt %* through, and it would also let *Net weight* through as a net price
+and *List position* through as a list price. A wrong role is worse than no
+role, because no role produces a check that did not run and says so, while a
+wrong role produces confident findings about the wrong two columns. `--map` is
+the answer to a typo.
+
+**An extended-price check** — does `quantity x unit price` equal the line
+total, does `area x price per square metre` equal the price. This is the most
+serious omission in 0.1 and it is left out for scope, not for principle: it is
+pure arithmetic on printed values, exactly like the seven, and the survey of
+open data portals found it live in the wild. A Campania public-works price
+book holds `base price + overheads + profit = final price` in 12,708 of 12,708
+parseable rows; a Polish developer price list, whose form is set by statute,
+holds `usable area x price per square metre = price` in 99 of 99 — and fails
+against its *other* area column, which is the interesting part. Any
+implementation would have to pick the right multiplicand and would need a role
+for a line total, distinct from a unit price, that the vocabulary does not yet
+have.
 
 **Currency conversion.** Any check that needs a rate needs a number from
 outside the document, and a rate has a date.
