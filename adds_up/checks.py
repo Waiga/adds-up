@@ -23,7 +23,7 @@ from decimal import Decimal
 
 from .columns import Column, fold
 from .models import CheckRun, Finding, Place
-from .numbers import Convention, Printed, is_blank, parse
+from .numbers import Convention, Printed, is_blank, parse, percentage_scale_of
 
 CHECK_NAMES = (
     "volume-tier",
@@ -50,7 +50,7 @@ class Reader:
     """A table's cells, read under the conventions decided for each column."""
 
     def __init__(self, sheet, header, rows, columns, conventions, header_row_number,
-                 reasons=None):
+                 reasons=None, row_numbers=None):
         self.sheet = sheet
         self.header = header
         self.rows = rows
@@ -61,6 +61,15 @@ class Reader:
         #: verbatim when a check cannot run, because "could not be read" and
         #: "holds no number at all" are different facts about a document.
         self.reasons = reasons or {}
+        #: The line each row was printed on. Not every row under the header is
+        #: read — a blank one is skipped, and a ragged one is set aside — so
+        #: counting from the header gives a number that is not in the file.
+        #: A finding cites the document, so it must cite the document's own
+        #: line, and this is where that comes from.
+        self.row_numbers = list(row_numbers) if row_numbers else []
+        #: Percentage columns already settled, by index. A wide published file
+        #: carries hundreds and the answer cannot change part way down one.
+        self._scales: dict[int, tuple[bool, str]] = {}
 
     def unreadable(self, column: Column) -> str:
         return (
@@ -124,10 +133,28 @@ class Reader:
                 )
         return printed
 
+    def percentage_scale(self, column: Column) -> tuple[bool, str]:
+        """Whether this percentage column's writing is settled by the document.
+
+        Decided once per column and remembered, because a wide published file
+        carries hundreds of them and the answer cannot change part way down.
+        """
+        cached = self._scales
+        if column.index not in cached:
+            values = []
+            for index in range(len(self.rows)):
+                printed = self.number(index, column)
+                if printed is not None:
+                    values.append(printed)
+            cached[column.index] = percentage_scale_of(values)
+        return cached[column.index]
+
     def place(self, row_index: int, column: Column) -> Place:
-        return Place(self.sheet, self.header_row_number + 1 + row_index, column.label)
+        return Place(self.sheet, self.line(row_index), column.label)
 
     def line(self, row_index: int) -> int:
+        if row_index < len(self.row_numbers):
+            return self.row_numbers[row_index]
         return self.header_row_number + 1 + row_index
 
 
@@ -540,8 +567,19 @@ def stated_discount(reader: Reader) -> CheckRun:
         readable_nets = [
             c for c in pairable if reader.conventions.get(c.index) is not None
         ]
+        settled, why = (
+            reader.percentage_scale(percent_column)
+            if reader.conventions.get(percent_column.index) is not None
+            else (True, "")
+        )
         if reader.conventions.get(percent_column.index) is None:
             refused.append(reader.unreadable(percent_column))
+        elif not settled:
+            # The same refusal the number reader makes of an undecidable
+            # thousands separator, for the same reason: a value read under
+            # the wrong convention does not produce a wrong number in one
+            # row, it produces a contradiction that is not in the document.
+            refused.append(f"'{percent_column.label}' was not used: {why}")
         elif not readable_lists:
             refused.append(reader.unreadable(candidate_lists[0]))
         elif not readable_nets:
@@ -829,7 +867,15 @@ def unit_mismatch(reader: Reader) -> CheckRun:
     for column, what in ((unit, "unit"), (currency, "currency")):
         if column is None:
             continue
-        seen: dict[tuple, tuple[dict[str, int], str]] = {}
+        # Folded, exactly as the item beside it is. `ML` and `mL` are one
+        # unit; a difference of capitalisation in a unit code is not a
+        # document saying two things. It mattered: this check matched two
+        # rows as one item across a *description* differing only in case and
+        # then reported the unit's capitalisation as two units, and all 17
+        # findings in one published file were that and nothing else. The
+        # printed form of the first row to show each unit is kept, because a
+        # finding quotes the document rather than this tool's folding.
+        seen: dict[tuple, tuple[dict[str, tuple[str, int]], str]] = {}
         for index in range(len(reader.rows)):
             key = reader.text(index, item).strip()
             value = reader.text(index, column).strip()
@@ -840,11 +886,11 @@ def unit_mismatch(reader: Reader) -> CheckRun:
             )
             if group not in seen:
                 seen[group] = ({}, key)
-            seen[group][0].setdefault(value, index)
+            seen[group][0].setdefault(value.casefold(), (value, index))
         for group, (values, shown) in seen.items():
             if len(values) < 2:
                 continue
-            listed = sorted(values.items(), key=lambda pair: pair[1])
+            listed = sorted(values.values(), key=lambda pair: pair[1])
             held = ", ".join(
                 f"{q.label} {reader.text(listed[0][1], q).strip()}"
                 for q in qualifiers

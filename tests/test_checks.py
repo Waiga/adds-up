@@ -362,5 +362,106 @@ class NothingIsJudged(unittest.TestCase):
                     self.assertNotIn(word, blob)
 
 
+class WhatTheHospitalCorpusFoundByHand(unittest.TestCase):
+    """Three defects a hand audit of 66 real findings found, one test each.
+
+    Each names the published file that exposed it. Each reproduces that file's
+    *shape* with invented values: no row of anyone's chargemaster is copied
+    into this repository.
+    """
+
+    def test_a_unit_differing_only_in_case_is_one_unit(self):
+        """`0122-120001-990277913_kula-hospital_standardcharges.csv`.
+
+        It prints `ML` on one row and `mL` on another for the same drug, and
+        this check reported two units — having already matched the two rows as
+        one item across a description differing in case in exactly the same
+        way. All 17 of that file's findings were this and nothing else.
+        """
+        text = (
+            "description,drug_type_of_measurement,standard_charge|gross\n"
+            "Sodium Chloride Injection,ML,10.00\n"
+            "sodium chloride injection,mL,10.00\n"
+        )
+        self.assertEqual(statements(run(text), "unit-mismatch"), [])
+
+    def test_two_genuinely_different_units_are_still_a_finding(self):
+        text = (
+            "description,drug_type_of_measurement,standard_charge|gross\n"
+            "Sodium Chloride Injection,ML,10.00\n"
+            "Sodium Chloride Injection,GR,10.00\n"
+        )
+        found = statements(run(text), "unit-mismatch")
+        self.assertEqual(len(found), 1)
+        self.assertIn("ML", found[0])
+        self.assertIn("GR", found[0])
+
+    #: The shape of `0018-451355-20-0929321_Collingsworth-General-Hospital`:
+    #: a percentage column every cell of which lies between 0 and 1. Read the
+    #: schema's way, 0.85 is 0.85% and the arithmetic never reconciles; read
+    #: as a fraction it reconciles exactly. Nothing in the document says
+    #: which, so the column is refused.
+    FRACTIONS = (
+        "description,standard_charge|gross,"
+        "standard_charge|Aetna|negotiated_dollar,"
+        "standard_charge|Aetna|negotiated_percentage\n"
+        "A widget,100.00,85.00,0.85\n"
+        "Another widget,200.00,170.00,0.85\n"
+    )
+    #: The same file with the schema's writing, which 553 of the 580
+    #: percentage columns measured across 200 published files use.
+    PERCENTAGES = FRACTIONS.replace("0.85", "85")
+
+    def test_a_percentage_column_of_fractions_is_refused_not_reported(self):
+        found = check(run(self.FRACTIONS), "stated-discount")
+        self.assertFalse(found.ran)
+        self.assertIn("between 0", found.reason)
+        self.assertEqual(found.findings, [])
+
+    def test_the_refusal_says_what_could_not_be_settled(self):
+        found = check(run(self.FRACTIONS), "stated-discount")
+        self.assertIn("no cell in the column settles which", found.reason)
+
+    def test_the_ordinary_writing_still_runs_and_reconciles(self):
+        found = check(run(self.PERCENTAGES), "stated-discount")
+        self.assertTrue(found.ran)
+        self.assertEqual(found.findings, [])
+
+    def test_a_percent_sign_settles_a_column_of_fractions(self):
+        text = self.FRACTIONS.replace("0.85", "0.85%")
+        found = check(run(text), "stated-discount")
+        self.assertTrue(found.ran)
+        self.assertTrue(found.findings)
+
+    def test_a_shifted_row_no_longer_supplies_an_inverted_range(self):
+        """`0042-380050-930508781 Sky Lakes Medical Center Standard Charges 2025.csv`.
+
+        Its description column leaves commas unquoted, so a row parses to more
+        cells than the header and every column after the description shifts —
+        including the de-identified minimum and maximum ten columns to its
+        right. 180,084 of its 1,342,453 rows are like that; every one of the
+        1,517 rows in it where the minimum exceeded the maximum was one of
+        them, and not one well-formed row had that defect. That was 36.7% of
+        the whole check's findings across the corpus.
+        """
+        text = (
+            "billing_class,description,standard_charge|gross,"
+            "De-Identified IP Max,De-Identified IP Min\n"
+            "IP,A widget,50.00,80,20\n"
+            "IP,A widget, with a comma,50.00,80,20\n"
+        )
+        result = run(text)
+        self.assertEqual(statements(result, "inverted-range"), [])
+        self.assertEqual(result.tables[0].rows_wider_than_header, 1)
+
+    def test_a_well_formed_inverted_range_is_still_a_finding(self):
+        text = (
+            "billing_class,description,standard_charge|gross,"
+            "De-Identified IP Max,De-Identified IP Min\n"
+            "IP,A widget,50.00,20,80\n"
+        )
+        self.assertEqual(len(statements(run(text), "inverted-range")), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

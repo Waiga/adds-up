@@ -205,6 +205,62 @@ def convention_of(cells: list[str]) -> tuple[Convention | None, str]:
     return None, "the column holds no number"
 
 
+def percentage_scale_of(values: "list[Printed]") -> tuple[bool, str]:
+    """Whether the document settles how the numbers in a percentage column are written.
+
+    A column whose *name* says percentage is written two ways in the wild. The
+    US price-transparency schema means 85% by ``85``; some hospitals write
+    ``0.85`` for the same thing. Read the second as the first and the
+    arithmetic is out by a factor of a hundred and never reconciles: one
+    published file's 11,230 reconciling rows were all reported as
+    contradictions.
+
+    Guessing which is meant would be inference from contents, which this tool
+    does not do. So the question asked is the same one asked of a thousands
+    separator: **does anything in the column settle it?**
+
+    Two things do. A cell that prints a ``%`` sign has said which it is. And a
+    cell holding more than 1 cannot be a fraction of the price beside it, so a
+    column with one in it is written the schema's way.
+
+    A column in which every value lies between 0 and 1 is settled by neither,
+    and is refused — the checks that needed it do not run, and the report says
+    why. Of the 1,623 columns given a percentage role across 173 published
+    files, that is 22 columns in 4 files; every other one carries a cell above
+    1 or a % sign and is read exactly as before.
+
+    It can still be wrong in one direction: a file writing fractions that
+    prices something *above* the gross charge puts a cell over 1 in the column
+    and is read as percentages. Said here rather than left to be found.
+    """
+    signed = 0
+    above_one = 0
+    fractional = 0
+    counted = 0
+    for printed in values:
+        counted += 1
+        if printed.percent:
+            signed += 1
+        if printed.value > 1:
+            above_one += 1
+        elif printed.value > 0:
+            fractional += 1
+    if signed:
+        return True, f"{signed} cell(s) in this column print a % sign"
+    if above_one:
+        return True, (
+            f"{above_one} cell(s) in this column hold more than 1, which a "
+            "fraction of a price is not, so 85 in this column is 85%"
+        )
+    if fractional:
+        return False, (
+            f"every one of the {counted} cell(s) in this column lies between 0 "
+            "and 1, which is 85% written as 0.85 in one convention and 0.85% in "
+            "the other, and no cell in the column settles which"
+        )
+    return True, "the column holds no value between 0 and 1, so nothing is in doubt"
+
+
 def parse(text: str, convention: Convention) -> Printed | None:
     """Read one printed cell under a decided convention.
 
