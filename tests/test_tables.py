@@ -149,9 +149,103 @@ class NumberFormats(unittest.TestCase):
         self.assertEqual(_format_decimals("#,##0.00;[Red]-#,##0.0000"), 2)
 
 
+def write_two_sheets(path: Path, sheets: dict[str, list[list[object]]]) -> None:
+    """A workbook with more than one worksheet.
+
+    `make_examples.write_xlsx` writes one, which left the loop over worksheets
+    — and `--sheet` — with no test at all.
+    """
+    import make_examples as m
+
+    overrides = []
+    rels = []
+    types = [
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">',
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>',
+        '<Default Extension="xml" ContentType="application/xml"/>',
+        '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>',
+    ]
+    entries = {}
+    names = []
+    for number, (name, rows) in enumerate(sheets.items(), start=1):
+        target = f"xl/worksheets/sheet{number}.xml"
+        body = []
+        for row_index, row in enumerate(rows, start=1):
+            cells = []
+            for column_index, value in enumerate(row):
+                reference = f"{m.column_letter(column_index)}{row_index}"
+                if isinstance(value, (int, float)):
+                    cells.append(f'<c r="{reference}"><v>{value}</v></c>')
+                elif value:
+                    cells.append(
+                        f'<c r="{reference}" t="inlineStr"><is><t>{value}</t></is></c>'
+                    )
+            body.append(f'<row r="{row_index}">{"".join(cells)}</row>')
+        entries[target] = (
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+            f'<sheetData>{"".join(body)}</sheetData></worksheet>'
+        )
+        types.append(
+            f'<Override PartName="/{target}" ContentType="application/vnd.'
+            'openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'
+        )
+        rels.append(
+            f'<Relationship Id="rId{number}" Type="http://schemas.openxmlformats.org/'
+            f'officeDocument/2006/relationships/worksheet" Target="worksheets/sheet{number}.xml"/>'
+        )
+        names.append(f'<sheet name="{name}" sheetId="{number}" r:id="rId{number}"/>')
+    types.append("</Types>")
+    workbook = (
+        '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" '
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        f'<sheets>{"".join(names)}</sheets></workbook>'
+    )
+    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("[Content_Types].xml", "".join(types))
+        archive.writestr("_rels/.rels", m.ROOT_RELS)
+        archive.writestr("xl/workbook.xml", workbook)
+        archive.writestr(
+            "xl/_rels/workbook.xml.rels",
+            '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/'
+            f'relationships">{"".join(rels)}</Relationships>',
+        )
+        for target, content in entries.items():
+            archive.writestr(target, content)
+
+
 class ReadingXlsx(unittest.TestCase):
     def setUp(self):
         self.directory = Path(tempfile.mkdtemp())
+
+    def test_every_worksheet_is_read(self):
+        """A price list routinely puts each product family on its own tab."""
+        path = self.directory / "two.xlsx"
+        write_two_sheets(path, {
+            "Trade": [["SKU", "Price"], ["A", 10.0]],
+            "Retail": [["SKU", "Price"], ["A", 20.0]],
+        })
+        tables = read(path)
+        self.assertEqual([t.name for t in tables], ["Trade", "Retail"])
+        self.assertEqual(tables[1].rows[0][1].text, "20.0")
+
+    def test_sheet_selects_one(self):
+        path = self.directory / "two.xlsx"
+        write_two_sheets(path, {
+            "Trade": [["SKU", "Price"], ["A", 10.0]],
+            "Retail": [["SKU", "Price"], ["A", 20.0]],
+        })
+        tables = read(path, sheet="Retail")
+        self.assertEqual([t.name for t in tables], ["Retail"])
+
+    def test_a_sheet_name_that_is_not_there_is_refused(self):
+        path = self.directory / "two.xlsx"
+        write_two_sheets(path, {"Trade": [["SKU", "Price"], ["A", 10.0]]})
+        with self.assertRaises(UnreadableFile):
+            read(path, sheet="Nope")
 
     def test_values_and_declared_precision_both_come_through(self):
         path = self.directory / "book.xlsx"

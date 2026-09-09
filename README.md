@@ -364,14 +364,20 @@ than none. The long version is
   *Kundenpreis* get no role. The report says which word it wanted; `--map`
   settles it. The vocabulary is a record of headers that exist, and it is
   biased towards the corpora this tool has met.
-- **A qualifier it does not know produces wrong findings.** If a column that
-  legitimately separates two rows has an unrecognised name, `two-prices` and
-  `unit-mismatch` treat those rows as the same thing. This is the most likely
-  source of a wrong finding on your file.
+- **A qualifier it does not know produces wrong findings, and not a few of
+  them.** If a column that legitimately separates two rows has an unrecognised
+  name, `two-prices` and `unit-mismatch` treat those rows as the same thing.
+  A published Czech transit fare list shows **2,396** apparent "price falls as
+  distance rises" violations when its rows are grouped by tariff and distance
+  alone, and **zero** once `validity_days` is part of the group. This is the
+  most likely source of a wrong finding on your file, and the failure mode is
+  thousands of findings rather than one.
 - **It cannot tell a unit price from a line total.** Where no column names a
   unit price it uses the net price and says so in the finding.
-- **It holds the whole table in memory.** Roughly 3× the file size for a wide
-  file. There is no streaming mode.
+- **It holds the whole table in memory.** The largest published file measured
+  — 1,083 MB of CSV, 93,954 rows across several hundred payer columns — needed
+  **3.6 GB and 62 seconds**. There is no streaming mode, and no cap: a file
+  bigger than your memory will not be read, it will swap.
 - **One file at a time.** It cannot compare this quarter's price list with
   last quarter's, or with the contract, or with the invoice.
 - **It reads values, not formulas.** A number produced by a broken formula is
