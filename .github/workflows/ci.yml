@@ -34,4 +34,16 @@ jobs:
             --skip volume-tier --skip discount-tier --skip bundle-above-parts \
             --skip stated-discount --skip two-prices --skip inverted-range \
             --skip unit-mismatch && exit 1 || test $? -eq 2
+      # Nor may a run in which a check reported that it ran but compared no
+      # numbers. This file has a real inverted tier and a price column the
+      # vocabulary does not know; only unit-mismatch can run, and it compares
+      # text. An adversarial review found this exiting 0.
+      - run: |
+          printf 'SKU,Quantity,UOM,Tariff amount payable\n' > "$RUNNER_TEMP/x.csv"
+          printf 'W-1,1,each,9.00\nW-1,1000,each,50.00\n' >> "$RUNNER_TEMP/x.csv"
+          adds-up "$RUNNER_TEMP/x.csv" && exit 1 || test $? -eq 2
+      # And a file this tool does not read must exit 2, not 1.
+      - run: |
+          echo "not a spreadsheet" > "$RUNNER_TEMP/x.pdf"
+          adds-up "$RUNNER_TEMP/x.pdf" && exit 1 || test $? -eq 2
       - run: PYTHONDONTWRITEBYTECODE=1 python -m unittest discover -s tests -v
