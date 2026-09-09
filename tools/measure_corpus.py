@@ -246,7 +246,11 @@ def measure(source: Path, sample_size: int, seed: int):
                             totals["findings_by_ladder_shape"][shape] += 1
                     for finding in check.findings:
                         totals["findings"][check.name] += 1
-                        if finding.note:
+                        # Matched on the note itself, not on "has any note".
+                        # A finding can carry more than one, and counting any
+                        # of them under this name would be a different number
+                        # wearing this one's label.
+                        if "priced at zero" in finding.note:
                             totals["volume_tier_zero_lower_band"] += 1
                         pool[check.name].append({
                             "label": identity["label"],
