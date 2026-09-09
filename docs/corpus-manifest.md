@@ -300,8 +300,29 @@ Redraw any of them with:
 
 ```bash
 python3 tools/measure_corpus.py usurdb.csv.gz --samples audit.json
-python3 tools/measure_hospital.py corpus/ --samples audit.json
+python3 tools/measure_hospital.py corpus/ --samples hospital-audit.json
 ```
 
 The draw is deduplicated by document and seeded at 11, so the same corpus
 gives the same findings. A different corpus will not.
+
+**The hospital audits are mechanically aided, and the aid is published.**
+`tools/audit_hospital.py` goes back to the rows a finding names, re-reads them
+with `csv.reader`, and prints every column in which the two rows differ:
+
+```bash
+python3 tools/audit_hospital.py corpus/ hospital-audit.json
+```
+
+It sorts each finding into `agree` — the two rows hold the same value in every
+column the tool could read — `derived`, where they differ only in figures
+computed from the price itself, and `distinguished`, where a column the tool
+has no name for holds different values and the document may well be separating
+the two rows.
+
+**Only the first of those is a verdict the script can give.** Whether a
+difference *matters* is the judgement, and it is made by a person looking at
+what the script prints. That is what caught the ten findings in the first
+audit whose two rows were identical but for a note reading `Gross Charge Type:
+Sta` against `Gross Charge Type: Fee` — the script reported the difference; a
+person decided it was a real one.
