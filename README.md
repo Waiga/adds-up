@@ -212,8 +212,9 @@ This was run over two corpora of real published documents, neither written by
 this project. Full provenance, hashes and selection rules:
 [`docs/corpus-manifest.md`](docs/corpus-manifest.md).
 
-`tools/measure_corpus.py` and `tools/measure_hospital.py` are the scripts that
-produced every number below.
+`tools/measure_corpus.py`, `tools/measure_hospital.py`, `tools/probe_gtfs.py`
+and `tools/audit_hospital.py` are the scripts that produced every number
+below.
 
 ### Corpus 1 — 29,521 published utility tariffs
 

@@ -76,10 +76,17 @@ def measure(directory: Path, sample_size: int, seed: int):
     pool: dict[str, list] = {name: [] for name in CHECK_NAMES}
     pooled: dict[str, set] = {name: set() for name in CHECK_NAMES}
 
-    for path in files:
+    for number, path in enumerate(files, start=1):
         size = path.stat().st_size
         totals["bytes_total"] += size
         started = time.monotonic()
+        # Progress on stderr, so a run that dies part way through says where.
+        # An earlier run was killed at some point among 200 files with its
+        # stderr discarded, and left nothing at all behind to say which.
+        print(
+            f"[{number}/{len(files)}] {size / 1e6:8.1f} MB  {path.name[:60]}",
+            file=sys.stderr, flush=True,
+        )
         try:
             result = analyse(path)
         except UnreadableFile as error:
@@ -97,6 +104,11 @@ def measure(directory: Path, sample_size: int, seed: int):
 
         elapsed = time.monotonic() - started
         totals["seconds_total"] += elapsed
+        # The analysed table is the largest thing in memory by far. Dropping
+        # it before the next file is read keeps two of them from overlapping.
+        peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        print(f"      {elapsed:6.1f}s  peak so far {peak / (1 << 20 if sys.platform == 'darwin' else 1 << 10):.0f} MB",
+              file=sys.stderr, flush=True)
         totals["slowest"].append(
             {"file": path.name, "megabytes": round(size / 1e6, 1),
              "seconds": round(elapsed, 1)}
@@ -142,6 +154,7 @@ def measure(directory: Path, sample_size: int, seed: int):
                     })
         if not any_ran:
             totals["files_with_no_check_at_all"] += 1
+        del result
 
     totals["slowest"] = sorted(
         totals["slowest"], key=lambda entry: -entry["seconds"]
