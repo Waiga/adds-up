@@ -93,6 +93,45 @@ def audit_two_rows(rows, header, first, second, check) -> tuple[str, list]:
     return "distinguished", differ
 
 
+NUMBER = re.compile(r"-?\d[\d,]*\.?\d*")
+
+
+def audit_one_row(directory: Path, entry: dict) -> str:
+    """Check that a single-row finding quotes numbers that are in that row.
+
+    The finding names a row and prints the values it compared. This goes back
+    to the row and confirms every number the finding quotes is a cell in it.
+    That is not the same computation the check did — it is the question a
+    person reading the audit wants answered, which is whether the finding
+    describes the document.
+    """
+    path = directory / entry["file"]
+    if not path.exists():
+        return "missing file"
+    found = ROW_IN_PLACE.search(entry["statement"]) or ROW_IN_PLACE.search(
+        " ".join(entry["places"])
+    )
+    if not found:
+        return "could not locate the row"
+    number = int(found.group(1))
+    with path.open(newline="", encoding="utf-8", errors="replace") as handle:
+        rows = list(csv.reader(handle))
+    if number > len(rows):
+        return "row beyond the file"
+    cells = {cell.strip() for cell in rows[number - 1]}
+    quoted = set()
+    for line in [entry["statement"], *entry["detail"]]:
+        quoted.update(NUMBER.findall(line))
+    # The row number itself, and any figure the finding computed rather than
+    # read, are not expected to be cells.
+    quoted.discard(str(number))
+    present = [value for value in quoted if value in cells]
+    return (
+        "quotes the row" if len(present) >= 2
+        else "fewer than two quoted values found in the row"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
@@ -106,13 +145,14 @@ def main() -> int:
         if args.check and name != args.check:
             continue
         if name not in ("two-prices", "unit-mismatch"):
-            # The other checks are single-row statements: the finding quotes
-            # both numbers it compared, so re-reading the row adds nothing a
-            # reader cannot do from the finding itself.
-            print(f"\n=== {name}: {len(entries)} finding(s), each a single row; "
-                  "read the statement")
+            print(f"\n=== {name}: {len(entries)} finding(s), single-row")
+            verdicts: Counter = Counter()
+            for entry in entries:
+                verdicts[audit_one_row(args.directory, entry)] += 1
+            for verdict, count in verdicts.most_common():
+                print(f"  {count:3}  {verdict}")
             for entry in entries[: args.show]:
-                print(f"    {entry['file'][:44]}: {entry['statement'][:120]}")
+                print(f"    {entry['file'][:40]}: {entry['statement'][:110]}")
             continue
 
         verdicts: Counter = Counter()
