@@ -182,6 +182,21 @@ rate sheet. The rule is that a bound is a range end only when a column naming
 the other end is present, and a quantity otherwise — and the report prints
 which reading it took.
 
+**Where several columns claim one role, the leftmost whose numbers can be read
+wins.** A published standard-charges file carries a cash price and a negotiated
+price side by side, and a hospital that publishes only the second leaves the
+first empty on every row; taking the leftmost regardless had the check
+reporting that it could not run with a usable column beside the one it had
+chosen.
+
+**The header row is chosen the same way — by names.** Among the header-shaped
+rows in the first 25 that have data under them, the one naming the most
+columns this tool recognises wins, and the last one only breaks a tie. That
+handles a title block above the header, which is what published files usually
+have, and a units row or category banner below it, which is what defeats
+taking the last one. The report prints which row it used and why, and
+`--header-row` overrides it.
+
 ## Format scope
 
 **CSV, TSV and XLSX. Not PDF.** A PDF price list is a page of positioned
