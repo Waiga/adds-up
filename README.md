@@ -121,7 +121,7 @@ and which did not, with a reason.
 | **discount-tier** | A larger quantity is given a smaller discount percentage than a smaller one. |
 | **bundle-above-parts** | A row names the items it contains, this document also prices every one of them, and the bundle costs more than their sum. If a component is not priced here, the total is *not established* and the row is set aside, not reported. |
 | **stated-discount** | A percentage printed beside a list price and a net price does not produce the second from the first, allowing for the precision the document itself prints. |
-| **two-prices** | The same item is priced twice, differently, and no other column tells the rows apart. |
+| **two-prices** | The same item is priced twice, differently, and no column this tool recognises tells the rows apart. A free-text note counts as one: two rows carrying different notes are two rows the document is separating. |
 | **inverted-range** | A row states a minimum above its own maximum. |
 | **unit-mismatch** | One item is priced in two different units, or two different currencies. A document that spans several currencies is normal and is not reported. |
 
@@ -133,7 +133,7 @@ arithmetic and that check does none.
 None of them uses a cost, a margin, a benchmark, a market rate or a currency
 conversion, because a price list states none of those.
 
-### Two narrowings that cost coverage on purpose
+### Three narrowings that cost coverage on purpose
 
 **A percentage has two opposite meanings, and only its name decides which.**
 *20% off* and *pays 20% of* are contradictory instructions and both appear in
@@ -141,6 +141,16 @@ real price lists — the second is how the US hospital price-transparency schema
 states a negotiated rate. So there are two roles, and the column's name picks
 one. Trying both readings and reporting only when neither fits was rejected:
 a check that accepts whichever reading happens to fit can never fail.
+
+**A percentage is only compared with the price it is a percentage of.** Where
+a document holds several net-price columns, the percentage pairs only with the
+one that is its own name with the last word changed — `…|negotiated_percentage`
+with `…|negotiated_dollar` — unless there is exactly one candidate. A published
+file puts a discounted cash price beside that pair, and a gross charge times a
+negotiated percentage has no reason to equal a cash price; on files that leave
+the negotiated dollar column empty throughout, falling back to the nearest
+other price produced a finding on every row. If nothing qualifies, the check
+declines to run and says so.
 
 **An undecidable number is refused, not guessed.** `1,234` is 1234 in one
 convention and 1.234 in the other. The convention is decided once per column

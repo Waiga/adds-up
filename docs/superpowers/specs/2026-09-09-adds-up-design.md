@@ -296,8 +296,9 @@ Two shapes fight over the slot and no single row can be told from the other.
 A published file often has a **title block above** the header. The CMS
 standard-charges template puts metadata names on row 1, metadata values on row
 2 and the real column names on row 3, and all three are header-shaped. Taking
-the *last* candidate handles that, and 95 of 99 files in the reference corpus
-need it.
+the *last* candidate handles that, and almost every file in the hospital
+corpus needs it — `measure_hospital.py` reports the distribution of the rows
+actually chosen under `header_row_chosen`, and the README prints it.
 
 A price list just as often has a **sub-header below** — a units row, a
 category banner, a second language. There the last candidate is the wrong one,

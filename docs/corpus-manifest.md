@@ -123,11 +123,11 @@ hospital name and a direct `file_url`. Retrieved 9 September 2026. That index
 is a third-party project (Apache-2.0), not a government publication, and it is
 **not current**: it was last refreshed in January 2026.
 
-Of the index rows the collection actually reached, **30% did not answer a
-`HEAD` request** — the `unreachable` counter in `_index.json`, which counts
-any failure, a timeout and a TLS error along with a genuine 404. Collection
-stops at the target count, so only a sixth of the 5,023 rows were ever tried;
-that 30% is a rate over what was tried, not over the index.
+Of the 865 index rows the collection actually reached, **260 — 30% — did not
+answer a `HEAD` request at all**. That counter counts any failure: a timeout
+and a TLS error along with a genuine 404. Collection stops at the target
+count, so only a sixth of the 5,023 rows were ever tried, and 30% is a rate
+over what was tried rather than over the index.
 
 **Selection rule.** The 5,023 rows are shuffled at seed 11 and worked through
 in that order. A row is kept when all of the following hold:
@@ -143,7 +143,16 @@ in that order. A row is kept when all of the following hold:
    five-column layout of its own.
 
 Collection stops at the target count. Everything rejected is counted by
-reason, and those counts are published beside the results.
+reason, in `_index.json`. For the 200 files these numbers come from, the
+counts were: 5,023 index rows, of which 865 were reached before the target was
+met — 605 answered a `HEAD`, 260 did not; of the 605, 226 were over the cap and
+106 declared no length; 53 downloaded but were not CMS-template files, 1
+download failed, and 200 were kept.
+
+The file is named `<n>-<ccn>-<basename>.csv` whatever the URL called it. An
+earlier version took the extension from the URL, so 38 of 200 files were named
+`.aspx`, `.php`, `.json`, `.CSV` or nothing at all — and the measurement
+matched `*.csv` and silently measured 162 of them.
 
 **What is not measured about the bias.** Nothing in `_index.json` records a
 bed count, a facility type or system membership, and no script compares the
@@ -160,10 +169,13 @@ zips the same content. The corpus therefore over-represents smaller hospitals
 under-represents any large system that publishes raw CSV.
 
 It does not exclude large files altogether: the zip exception lets several
-hundred-megabyte documents through, and the corpus spans 8.6 GB of CSV with a
-median of 5.9 MB and a maximum of 1,083 MB. That spread is useful — it is what
-produced the tool's memory and timing numbers — but it is a spread that fell
-out of the rule rather than one the rule was designed to give.
+hundred-megabyte documents through. The 200 files collected hold **9.28 GB of
+CSV** — a median of **6.89 MB**, a maximum of **1,083 MB** — from downloads
+whose median was **5.87 MB**. That spread is useful, and it is what produced
+the tool's memory and timing numbers, but it fell out of the rule rather than
+being what the rule was designed to give. Every one of those figures is in
+`_index.json`, which records both the CSV size and the downloaded size for
+each file.
 
 The cap was chosen so the corpus could be collected and re-collected in under
 an hour, and it is why this corpus is a few hundred documents rather than
