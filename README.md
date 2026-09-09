@@ -428,28 +428,40 @@ than none. The long version is
 ## Reproducibility
 
 Every number above comes out of a script in `tools/`, against a corpus whose
-hash is published. Re-run them:
+hashes are published. Re-run them:
 
 ```bash
 curl -sO https://apps.openei.org/USURDB/download/usurdb.csv.gz
 shasum -a 256 usurdb.csv.gz     # 9005c5358de7e2471cef...d28d5
-python3 tools/measure_corpus.py usurdb.csv.gz
-python3 tools/measure_corpus.py usurdb.csv.gz --samples audit.json
+python3 tools/measure_corpus.py usurdb.csv.gz --samples tariff-audit.json
 
 python3 tools/fetch_hospital.py corpus/ --count 200 --cap-mb 40
 python3 tools/measure_hospital.py corpus/ --samples hospital-audit.json
+python3 tools/audit_hospital.py corpus/ hospital-audit.json
+
+python3 tools/probe_gtfs.py --feeds 140
 ```
+
+**One exception, and it is flagged in the manifest rather than glossed.** The
+survey of open data portals — 3,802 URLs, 43 price-list titles, a 1.7%
+true-positive rate — was a one-off reconnaissance across six portals whose
+APIs differ and whose result sets are capped by relevance. No script
+reproduces it; the API forms are published so it can be repeated by hand.
 
 Neither corpus is redistributed here. The tariff export is 195 MB and public
 domain; the hospital files are republished constantly and belong to the
 hospitals that publish them. What is published is the measurements, the
-selection rules, and the hashes that tell you whether you have the same
-documents.
+selection rules, and — in
+[`docs/hospital-corpus.csv`](docs/hospital-corpus.csv) — the SHA-256 of every
+one of the 200 hospital files, beside its certification number, facility name
+and URL. That file is a bibliography: no price, no charge, no row of anyone's
+chargemaster, no personal data.
 
 A corpus that was collected and then **rejected** is in the manifest too:
-1,174,346 published transit fares, across 139 GTFS feeds, in which `fare_id`
-is a primary key and every feed uses one currency — so the two checks it was
-collected for cannot fire on it even in principle.
+1,174,347 published transit fares across 140 GTFS feeds, in which `fare_id` is
+a primary key and no feed uses more than one currency — so the two checks it
+was collected for cannot fire on it even in principle. Twelve currencies
+appear across those feeds, and never two in one.
 
 ## Licence
 
