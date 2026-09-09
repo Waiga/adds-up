@@ -63,6 +63,23 @@ def is_json(path: Path) -> bool:
     return head[:1] in (b"{", b"[")
 
 
+#: A check's reason for not running names the column that stopped it, so the
+#: raw strings are as various as the corpus's headers and cannot be counted.
+#: These buckets are what the README quotes, and they are why it can.
+def bucket(reason: str) -> str:
+    if "was not used: every one of the" in reason:
+        return "the percentage column's writing is not settled by the document"
+    if "could not be placed against any of the" in reason:
+        return "the percentage could not be paired with a price column"
+    if "the column holds no number" in reason:
+        return "a column was recognised for the role but holds no number"
+    if "holds no number this tool could use" in reason:
+        return "the number convention in the column could not be decided"
+    if "switched off" in reason:
+        return "switched off"
+    return reason
+
+
 def measure(directory: Path, sample_size: int, seed: int):
     # Everything the fetch kept, whatever it is called. Matching `*.csv`
     # case-sensitively measured 162 of 200 files and said so nowhere.
@@ -74,6 +91,23 @@ def measure(directory: Path, sample_size: int, seed: int):
         "tool_version": __version__,
         "files": len(files),
         "unreadable": 0,
+        # A JSON document served from a `.csv` URL is now refused by name,
+        # with a message saying it is not a table. It was always exit 2; the
+        # difference is that the reader is told why. Counted apart from a file
+        # that could not be read, because they are different facts.
+        "refused_not_a_table": 0,
+        # Rows whose cell count is not the header's. Not read, because their
+        # values sit under headings that are not theirs — and counted, because
+        # being silent about them was the largest measured source of wrong
+        # findings in this tool's history.
+        "rows_not_read_wider": 0,
+        "rows_not_read_narrower": 0,
+        "files_with_ragged_rows": 0,
+        "worst_ragged_files": [],
+        # Percentage columns refused because nothing in the document settles
+        # whether 0.85 in them means 85% or 0.85%.
+        "percentage_columns_refused_as_undecidable": 0,
+        "files_with_a_refused_percentage_column": [],
         "crashes": 0,
         "crash_examples": [],
         "rows_total": 0,
@@ -96,6 +130,7 @@ def measure(directory: Path, sample_size: int, seed: int):
         "roles_found": Counter(),
         "checks_ran": {name: 0 for name in CHECK_NAMES},
         "checks_did_not_run": {name: Counter() for name in CHECK_NAMES},
+        "why_a_check_did_not_run": {name: Counter() for name in CHECK_NAMES},
         "findings": {name: 0 for name in CHECK_NAMES},
         "documents_with_a_finding": {name: 0 for name in CHECK_NAMES},
         "files_with_no_check_at_all": 0,
@@ -136,9 +171,14 @@ def measure(directory: Path, sample_size: int, seed: int):
         try:
             result = analyse(path)
         except UnreadableFile as error:
-            totals["unreadable"] += 1
-            if len(totals["crash_examples"]) < 10:
-                totals["crash_examples"].append({"file": path.name, "error": str(error)})
+            if "not a table" in str(error):
+                totals["refused_not_a_table"] += 1
+            else:
+                totals["unreadable"] += 1
+                if len(totals["crash_examples"]) < 10:
+                    totals["crash_examples"].append(
+                        {"file": path.name, "error": str(error)}
+                    )
             continue
         except Exception as error:  # noqa: BLE001 — a crash is a measurement
             totals["crashes"] += 1
@@ -160,8 +200,12 @@ def measure(directory: Path, sample_size: int, seed: int):
              "seconds": round(elapsed, 1)}
         )
         any_ran = False
+        ragged_here = 0
         for table in result.tables:
             totals["rows_total"] += table.row_count
+            totals["rows_not_read_wider"] += table.rows_wider_than_header
+            totals["rows_not_read_narrower"] += table.rows_narrower_than_header
+            ragged_here += table.rows_set_aside_for_width
             totals["columns_total"] += len(table.columns)
             totals["header_row_chosen"][table.header_row_number] += 1
             if tabular:
@@ -183,11 +227,21 @@ def measure(directory: Path, sample_size: int, seed: int):
                 if "no other cell" in reason or "mixes both" in reason:
                     totals["number_convention_refusals"][reason[:60]] += 1
             for check in table.checks:
+                refused_scale = [
+                    line for line in check.set_aside
+                    if "lies between 0 " in line
+                ] + ([check.reason] if not check.ran and "lies between 0 " in check.reason
+                     else [])
+                if refused_scale:
+                    totals["percentage_columns_refused_as_undecidable"] += len(refused_scale)
+                    if path.name not in totals["files_with_a_refused_percentage_column"]:
+                        totals["files_with_a_refused_percentage_column"].append(path.name)
                 if check.ran:
                     totals["checks_ran"][check.name] += 1
                     any_ran = True
                 else:
                     totals["checks_did_not_run"][check.name][check.reason[:110]] += 1
+                    totals["why_a_check_did_not_run"][check.name][bucket(check.reason)] += 1
                 totals["set_aside"] += len(check.set_aside)
                 if check.findings:
                     totals["documents_with_a_finding"][check.name] += 1
@@ -210,6 +264,12 @@ def measure(directory: Path, sample_size: int, seed: int):
                         "note": finding.note,
                         "places": [f"row {p.row}, {p.column}" for p in finding.places],
                     })
+        if ragged_here:
+            totals["files_with_ragged_rows"] += 1
+            totals["worst_ragged_files"].append(
+                {"file": path.name, "rows_not_read": ragged_here,
+                 "rows_read": sum(t.row_count for t in result.tables)}
+            )
         if not any_ran:
             totals["files_with_no_check_at_all"] += 1
         del result
@@ -219,6 +279,9 @@ def measure(directory: Path, sample_size: int, seed: int):
     totals["cms_template_versions"] = dict(
         totals["cms_template_versions"].most_common()
     )
+    totals["worst_ragged_files"] = sorted(
+        totals["worst_ragged_files"], key=lambda entry: -entry["rows_not_read"]
+    )[:10]
     totals["slowest"] = sorted(
         totals["slowest"], key=lambda entry: -entry["seconds"]
     )[:10]
@@ -239,6 +302,10 @@ def measure(directory: Path, sample_size: int, seed: int):
     totals["checks_did_not_run"] = {
         name: dict(counter.most_common(5))
         for name, counter in totals["checks_did_not_run"].items()
+    }
+    totals["why_a_check_did_not_run"] = {
+        name: dict(counter.most_common())
+        for name, counter in totals["why_a_check_did_not_run"].items()
     }
 
     rng = random.Random(seed)
