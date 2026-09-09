@@ -73,6 +73,10 @@ class TableResult:
     row_count: int
     columns: list  # list[columns.Column]
     conventions: dict  # index -> sentence
+    #: The rows above the header, as text. A price list's title block often
+    #: carries the currency, the effective date or the schema version that
+    #: the columns themselves do not repeat.
+    preamble: list = field(default_factory=list)
     checks: list[CheckRun] = field(default_factory=list)
 
     @property

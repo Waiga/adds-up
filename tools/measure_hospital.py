@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import re
 import resource
 import sys
 import time
@@ -37,6 +38,10 @@ from adds_up import __version__  # noqa: E402
 from adds_up.analyse import analyse  # noqa: E402
 from adds_up.checks import CHECK_NAMES  # noqa: E402
 from adds_up.tables import UnreadableFile  # noqa: E402
+
+#: A CMS standard-charges template version, as printed in the metadata block
+#: above the header. Three generations are in circulation at once.
+VERSION = re.compile(r"v?[23]\.\d+\.\d+")
 
 
 def measure(directory: Path, sample_size: int, seed: int):
@@ -55,6 +60,12 @@ def measure(directory: Path, sample_size: int, seed: int):
         "rows_total": 0,
         "columns_total": 0,
         "columns_with_a_role": 0,
+        # The point of this corpus is headers this project did not write, so
+        # the count of distinct ones is the figure that says how much of that
+        # it delivers. `columns_total` counts instances, which is a different
+        # and much larger number.
+        "distinct_column_names": 0,
+        "cms_template_versions": Counter(),
         "header_row_chosen": Counter(),
         "roles_found": Counter(),
         "checks_ran": {name: 0 for name in CHECK_NAMES},
@@ -75,6 +86,7 @@ def measure(directory: Path, sample_size: int, seed: int):
     }
     pool: dict[str, list] = {name: [] for name in CHECK_NAMES}
     pooled: dict[str, set] = {name: set() for name in CHECK_NAMES}
+    names: set[str] = set()
 
     for number, path in enumerate(files, start=1):
         size = path.stat().st_size
@@ -119,9 +131,14 @@ def measure(directory: Path, sample_size: int, seed: int):
             totals["columns_total"] += len(table.columns)
             totals["header_row_chosen"][table.header_row_number] += 1
             for column in table.columns:
+                names.add(column.name.strip())
                 if column.role:
                     totals["columns_with_a_role"] += 1
                     totals["roles_found"][column.role] += 1
+            for row in table.preamble:
+                for cell in row:
+                    if VERSION.fullmatch(cell.strip()):
+                        totals["cms_template_versions"][cell.strip()] += 1
             for index, reason in table.conventions.items():
                 if "no other cell" in reason or "mixes both" in reason:
                     totals["number_convention_refusals"][reason[:60]] += 1
@@ -156,6 +173,10 @@ def measure(directory: Path, sample_size: int, seed: int):
             totals["files_with_no_check_at_all"] += 1
         del result
 
+    totals["distinct_column_names"] = len(names)
+    totals["cms_template_versions"] = dict(
+        totals["cms_template_versions"].most_common()
+    )
     totals["slowest"] = sorted(
         totals["slowest"], key=lambda entry: -entry["seconds"]
     )[:10]

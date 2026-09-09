@@ -65,6 +65,7 @@ def analyse(
             row_count=len(table.rows),
             columns=columns,
             conventions=reasons,
+            preamble=table.preamble,
         )
         reader = check_module.Reader(
             sheet=table.name,
