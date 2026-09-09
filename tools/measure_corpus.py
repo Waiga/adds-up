@@ -11,11 +11,11 @@ same export gives the same rows to anyone who runs it.
 
 The reshape is the only thing done to the data. A URDB row stores a tariff's
 tier table across up to 6 periods x 24 tiers of wide columns; this writes each
-period's tiers out as rows, keeping URDB's own field names — ``max``, ``rate``,
-``adj``, ``unit``. Nothing is filtered, corrected or rounded.
+period's tiers out as rows, keeping URDB's own field names — ``tier``, ``max``,
+``rate``, ``adj``, ``unit``. Nothing is filtered, corrected or rounded.
 
 That reshape is also the measurement's largest limitation and it is stated in
-the manifest: every document in this corpus arrives with the same four column
+the manifest: every document in this corpus arrives with the same five column
 names, so the column-recognition step is exercised once rather than 29,521
 times.
 """
@@ -122,20 +122,52 @@ def price_lists(source: Path):
                     }, rows
 
 
+def export_shape(source: Path) -> dict:
+    """The export's own dimensions, so the manifest's figures have a producer.
+
+    Counted from the file rather than from the price lists derived from it —
+    the two are different numbers and one of them used to be printed under the
+    other's name.
+    """
+    utilities = set()
+    with_a_source = 0
+    columns = 0
+    records = 0
+    with opener(source) as handle:
+        reader = csv.DictReader(handle)
+        columns = len(reader.fieldnames or [])
+        for row in reader:
+            records += 1
+            utilities.add(row.get("utility", ""))
+            if row.get("source"):
+                with_a_source += 1
+    return {
+        "records": records,
+        "columns": columns,
+        "utilities": len(utilities),
+        "records_naming_a_source_document": with_a_source,
+    }
+
+
 def measure(source: Path, sample_size: int, seed: int):
     totals = {
         "tool_version": __version__,
+        "python": sys.version.split()[0],
         "corpus": {
             "file": source.name,
             "sha256": sha256(source),
             "bytes": source.stat().st_size,
+            "export": export_shape(source),
         },
-        "records_in_export": 0,
+        "records_with_a_multi_tier_list": 0,
         "price_lists": 0,
         "distinct_tariffs": 0,
         "distinct_utilities": 0,
         "still_active": 0,
         "rows_total": 0,
+        # The design doc explains why an adjuster is added to the rate; this
+        # is how many rows carry one, so that explanation has a producer.
+        "rows_with_an_adjustment": 0,
         "crashes": 0,
         "crash_examples": [],
         "checks_ran": {name: 0 for name in CHECK_NAMES},
@@ -165,6 +197,9 @@ def measure(source: Path, sample_size: int, seed: int):
         for identity, rows in price_lists(source):
             totals["price_lists"] += 1
             totals["rows_total"] += len(rows)
+            totals["rows_with_an_adjustment"] += sum(
+                1 for row in rows if row["adj"] not in ("", None)
+            )
             totals["tier_count"][len(rows)] += 1
             tariffs.add(identity["label"])
             utilities.add(identity["utility"])
@@ -228,7 +263,10 @@ def measure(source: Path, sample_size: int, seed: int):
                             "rows": rows,
                         })
 
-    totals["records_in_export"] = len(seen_records)
+    # Not the records in the export: `seen_records` only ever receives labels
+    # of records that already passed the two-tier filter. The field is named
+    # for what it is.
+    totals["records_with_a_multi_tier_list"] = len(seen_records)
     totals["distinct_tariffs"] = len(tariffs)
     totals["distinct_utilities"] = len(utilities)
     totals["by_sector"] = dict(totals["by_sector"])

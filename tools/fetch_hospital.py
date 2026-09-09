@@ -150,6 +150,13 @@ def collect(out: Path, want: int, cap: int, seed: int) -> dict:
             return
         lines = head_text.splitlines()
         ccn = str(entry.get("ccn") or "")
+        # The content has been verified to be a CMS-template CSV, so it is
+        # named as one. A URL basename is not: 38 of the first 200 files
+        # collected were called `.aspx`, `.php`, `.json`, `.CSV` or nothing at
+        # all, and `measure_hospital.py` glob'd `*.csv` and silently measured
+        # 162 of them.
+        stem = name.rsplit(".", 1)[0] if "." in name else name
+        name = f"{stem}.csv"
         with lock:
             if stats["kept"] >= want:
                 stop.set()

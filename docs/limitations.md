@@ -37,8 +37,8 @@ The clearest case is the volume-tier check. **Inclining block pricing —
 charging more per unit as consumption rises — is a deliberate and ubiquitous
 design in utility tariffs**. Thirty volume-tier findings from a corpus of
 29,521 published tariffs were read by hand: all thirty were arithmetically
-correct, and not one of the thirty was a mistake. The check reports that a
-larger band is priced higher, in those words, and stops there.
+correct, and twenty-nine of the thirty were not mistakes. The check reports
+that a larger band is priced higher, in those words, and stops there.
 
 The same applies elsewhere. A bundle above the sum of its parts may be a
 service package. The same item at two prices may be a legacy row somebody
@@ -65,10 +65,6 @@ a genuine inverted tier whose price column was headed *Tariff amount payable*
 `unit-mismatch` found the item and unit columns, reported that it had run,
 found the units consistent, and the tool exited `0`. It now exits `2` and says
 so.
-
-Absence of a column is never reported as a defect in the document. "No column
-names a discount percentage" is a statement about what this tool could read,
-not a criticism of the price list.
 
 Absence of a column is never reported as a defect in the document. "No column
 names a discount percentage" is a statement about what this tool could read,

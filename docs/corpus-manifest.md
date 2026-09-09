@@ -32,7 +32,12 @@ Laboratory for the U.S. Department of Energy. No key, no account.
 (12,218,252 bytes, gzipped; 195,046,146 bytes uncompressed).
 
 **Records in the export.** 58,920 rate records in 737 columns, from 2,938
-utilities.
+utilities. Those four figures are printed by `tools/measure_corpus.py` under
+`corpus.export`, counted from the file itself rather than from the price lists
+derived from it — for a while a field named `records_in_export` held 18,049,
+which is the number of *tariffs with a multi-tier rate structure*, and a
+stranger re-running would have got a figure 3.3 times smaller than this
+document's under the same name.
 
 **Selection rule.** Every combination of record, rate structure and period
 whose tier list holds **two or more tiers**. The three structures read are
@@ -67,7 +72,10 @@ python3 tools/measure_corpus.py usurdb.csv.gz --samples audit.json
 ```
 
 `tools/measure_corpus.py` prints every number published about this corpus as
-JSON, including the export's own hash, so a result carries its provenance.
+JSON, including the export's own hash and the Python it ran on, so a result
+carries its provenance. **32,996 of the 75,969 tier rows carry an adjuster**,
+which is why the volume-tier check adds one to the rate before comparing;
+that figure is `rows_with_an_adjustment` in the same output.
 
 `--samples` draws the audit sample at seed 11, thirty findings, one per
 tariff, so the same export gives anyone the same thirty rows.
@@ -113,8 +121,13 @@ https://raw.githubusercontent.com/nathansutton/hospital-price-transparency/main/
 51 JSON files, one per state plus DC, **5,023 rows**, each carrying a CCN, a
 hospital name and a direct `file_url`. Retrieved 9 September 2026. That index
 is a third-party project (Apache-2.0), not a government publication, and it is
-**not current**: it was last refreshed in January 2026, which is the main
-reason a third of its URLs no longer resolve.
+**not current**: it was last refreshed in January 2026.
+
+Of the index rows the collection actually reached, **30% did not answer a
+`HEAD` request** — the `unreachable` counter in `_index.json`, which counts
+any failure, a timeout and a TLS error along with a genuine 404. Collection
+stops at the target count, so only a sixth of the 5,023 rows were ever tried;
+that 30% is a rate over what was tried, not over the index.
 
 **Selection rule.** The 5,023 rows are shuffled at seed 11 and worked through
 in that order. A row is kept when all of the following hold:
@@ -131,6 +144,12 @@ in that order. A row is kept when all of the following hold:
 
 Collection stops at the target count. Everything rejected is counted by
 reason, and those counts are published beside the results.
+
+**What is not measured about the bias.** Nothing in `_index.json` records a
+bed count, a facility type or system membership, and no script compares the
+kept set against the rejected one. The paragraph below is a mechanism, argued
+from the selection rule, not a measurement. It is written as an argument
+because that is what it is.
 
 **The bias this creates, stated plainly.** The 40 MB cap is not neutral. Real
 standard-charges files run to hundreds of megabytes, and a hospital that
@@ -212,6 +231,16 @@ Polish, French, Italian, Dutch, German and Slovak.
 | data.europa.eu | `https://data.europa.eu/api/hub/search/search?q=…` |
 | GSA CALC | **gone** — `calc.gsa.gov/api/rates/` 404s, `api.calc.gsa.gov` does not resolve, and `buy.gsa.gov` is behind single sign-on. There is no public contract labour-rate API today. |
 
+**These figures came from a one-off reconnaissance and no script in `tools/`
+reproduces them.** That is a deliberate exception to this repository's rule
+that every published number has a producing script, and it is flagged here
+rather than glossed: the survey was a search of six portals whose APIs differ,
+whose result sets are capped by relevance, and which change; scripting it
+would produce a number that drifts without meaning anything. The API forms
+above are given so the search can be repeated by hand, and the conclusion —
+that these portals do not hold 500 independent price lists — is what the
+figures are for.
+
 Twelve terms across six portals gave **3,802 unique CSV or XLSX download
 URLs**. Of those, **43** have a title that names a price list or a fee
 schedule. A random sample of 180 was downloaded and its headers read: 25 could
@@ -259,8 +288,14 @@ free and machine-readable, and they span many currencies, which looked like
 the one available source that could exercise `unit-mismatch` on currency
 rather than on units.
 
-139 feeds were collected and measured before the idea was abandoned. The
-reason it fails is structural, and it is worth recording:
+`tools/probe_gtfs.py` is the script that established this and prints every
+figure below:
+
+```bash
+python3 tools/probe_gtfs.py --feeds 140
+```
+
+The reason the corpus fails is structural, and it is worth recording:
 
 | | |
 |---|---|

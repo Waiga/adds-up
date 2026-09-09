@@ -7,8 +7,9 @@ call, no dependencies beyond Python itself.
 
 ```
 $ adds-up examples/volume-tiers.csv
+adds-up 0.1.0 — examples/volume-tiers.csv
 
-6 row(s) under a header read from row 4, the last header-shaped row above the data; 3 row(s) above it were read as a title block.
+6 row(s) under a header read from row 4, the only header-shaped row above the data with data under it; 3 row(s) above it were read as a title block.
 5 of 5 column(s) were given a role.
 3 of 7 check(s) ran, comparing 4 pair(s) of numbers. 1 finding(s).
 
@@ -67,9 +68,9 @@ consistent price. It does not know which is wrong, or whether either is.
 The corpus proved this the hard way. **Inclining block pricing — charging more
 per unit as you use more — is deliberate and everywhere in utility tariffs.**
 Of thirty volume-tier findings read by hand against 29,521 published tariffs,
-all thirty were arithmetically correct and **none of the thirty was a
-mistake**: every one was pricing somebody meant to set. The check says a
-larger band is priced higher, in those words, and stops.
+all thirty were arithmetically correct and **twenty-nine were not mistakes**:
+they were pricing somebody meant to set. The check says a larger band is
+priced higher, in those words, and stops.
 
 ## Install
 
@@ -124,9 +125,13 @@ and which did not, with a reason.
 | **inverted-range** | A row states a minimum above its own maximum. |
 | **unit-mismatch** | One item is priced in two different units, or two different currencies. A document that spans several currencies is normal and is not reported. |
 
-**Every one of these is arithmetic on numbers printed in the input.** None
-uses a cost, a margin, a benchmark, a market rate or a currency conversion,
-because a price list states none of those.
+**Every one of these compares two things printed in the input**, and six of
+the seven compare numbers. `unit-mismatch` compares text — a unit code against
+a unit code — and the report says so beside it, because exit 0 is earned by
+arithmetic and that check does none.
+
+None of them uses a cost, a margin, a benchmark, a market rate or a currency
+conversion, because a price list states none of those.
 
 ### Two narrowings that cost coverage on purpose
 
@@ -210,6 +215,7 @@ distinct tariffs published by 2,062 utilities.
 |---|---|
 | Price lists | 29,521 |
 | Tier rows in them | 75,969 |
+| — carrying a per-unit adjuster, added to the rate before comparing | 32,996 |
 | Crashes | **0** |
 | `volume-tier` ran on | 29,205 |
 | — did not run, rate column undecidable | 316 |
@@ -272,6 +278,14 @@ people who have never heard of this tool**.
 Every one of these was a real defect, found only by meeting real published
 files. The suite was green throughout.
 
+**The counts in this section are not reproducible.** They were taken against
+the corpora named above with *earlier* versions of this tool, and the current
+`tools/` scripts cannot produce them, because the defects they measure are
+fixed. They are a changelog with evidence attached, not a measurement — which
+is exactly the distinction this repository otherwise insists on, so it is
+stated rather than left for a reader to discover that the numbers do not
+re-run.
+
 - **`0.091` was refused as an undecidable separator.** The rule about `1,234`
   had never met a price below one unit. 1,898 real tariffs were refused
   because of it. A leading zero cannot be a thousands group, and now says so.
@@ -302,10 +316,10 @@ files. The suite was green throughout.
 - **The zero-band note missed exactly the case that needed it.** It tested the
   rate plus its adjuster, so a band printed at `0` with an adjuster of `-1.4`
   summed to `-1.4` and carried no note. It now tests the printed rate.
-- **Reading a whole table into memory costs about 3× the file size.** A
-  1,083 MB published file needed 3.6 GB and 62 seconds. `Cell` now uses
-  `__slots__`, which was worth gigabytes; the underlying limit remains and is
-  published rather than warned about.
+- **Reading a whole table into memory costs about four times the file size.**
+  The largest published file in the corpus, 1,083 MB, needs about 4.2 GB.
+  `Cell` now uses `__slots__`, which was worth gigabytes on it; the underlying
+  limit remains and is published rather than warned about.
 
 ## What an adversarial review found that neither the tests nor the corpus did
 
@@ -374,10 +388,12 @@ than none. The long version is
   thousands of findings rather than one.
 - **It cannot tell a unit price from a line total.** Where no column names a
   unit price it uses the net price and says so in the finding.
-- **It holds the whole table in memory.** The largest published file measured
-  — 1,083 MB of CSV, 93,954 rows across several hundred payer columns — needed
-  **3.6 GB and 62 seconds**. There is no streaming mode, and no cap: a file
-  bigger than your memory will not be read, it will swap.
+- **It holds the whole table in memory.** The largest published file in the
+  corpus — 1,083 MB of CSV, 93,954 rows of 285 columns — needs about **4.2 GB
+  and 44 seconds** on the machine these numbers were taken on (macOS,
+  CPython 3.14). That is roughly four times the file size. There is no
+  streaming mode and no cap: a file bigger than your memory will not be read,
+  it will swap.
 - **One file at a time.** It cannot compare this quarter's price list with
   last quarter's, or with the contract, or with the invoice.
 - **It reads values, not formulas.** A number produced by a broken formula is

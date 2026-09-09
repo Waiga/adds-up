@@ -40,7 +40,12 @@ from adds_up.tables import UnreadableFile  # noqa: E402
 
 
 def measure(directory: Path, sample_size: int, seed: int):
-    files = sorted(p for p in directory.glob("*.csv") if p.name != "_index.json")
+    # Everything the fetch kept, whatever it is called. Matching `*.csv`
+    # case-sensitively measured 162 of 200 files and said so nowhere.
+    files = sorted(
+        path for path in directory.iterdir()
+        if path.is_file() and path.name != "_index.json"
+    )
     totals = {
         "tool_version": __version__,
         "files": len(files),
@@ -64,6 +69,8 @@ def measure(directory: Path, sample_size: int, seed: int):
         "seconds_total": 0.0,
         "slowest": [],
         "peak_rss_mb": 0,
+        "peak_rss_measured_on": "",
+        "python": "",
         "bytes_total": 0,
     }
     pool: dict[str, list] = {name: [] for name in CHECK_NAMES}
@@ -140,9 +147,14 @@ def measure(directory: Path, sample_size: int, seed: int):
         totals["slowest"], key=lambda entry: -entry["seconds"]
     )[:10]
     totals["seconds_total"] = round(totals["seconds_total"], 1)
-    totals["peak_rss_mb"] = round(
-        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1 << 20), 1
-    )
+    # `ru_maxrss` is bytes on macOS and kilobytes on Linux. Dividing by 2**20
+    # unconditionally is right on one of them and 1024x wrong on the other,
+    # which includes this repository's own CI.
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    divisor = 1 << 20 if sys.platform == "darwin" else 1 << 10
+    totals["peak_rss_mb"] = round(peak / divisor, 1)
+    totals["peak_rss_measured_on"] = sys.platform
+    totals["python"] = sys.version.split()[0]
     totals["header_row_chosen"] = dict(sorted(totals["header_row_chosen"].items()))
     totals["roles_found"] = dict(totals["roles_found"].most_common())
     totals["number_convention_refusals"] = dict(

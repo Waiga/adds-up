@@ -32,9 +32,9 @@ reader is `zipfile` and `xml.etree` for exactly this reason.
 **No verdicts, ever.** Nothing in the output may say that a price is right,
 wrong, high, low, fair, competitive or profitable. Every finding is a statement
 about two numbers printed in the same document. `tests/test_checks.py` runs a
-file that trips five checks and fails if a forbidden word appears in any
-finding — *should*, *wrong*, *error*, *margin*, *profit*, *overpriced*,
-*recommend* and a dozen more. A change that needs one of those words is a
+file that produces findings from four checks at once and fails if any of
+seventeen forbidden words appears in one — *should*, *wrong*, *error*,
+*margin*, *profit*, *overpriced*, *recommend* among them. A change that needs one of those words is a
 change to the tool's purpose, and belongs in an issue first.
 
 **Nothing that needs a cost.** A price list does not state one. Any check that

@@ -11,7 +11,7 @@ with `zipfile` and no dependencies, which is also how the tool reads it.
 | `volume-tiers.csv` | a title block above the header, and one tier that inverts | 1 |
 | `discount-schedule.csv` | a discount that does not reconcile, the same item twice, and one item in two currencies | 1 |
 | `rate-card.xlsx` | an `.xlsx` whose stored values are more precise than its display, a shrinking discount, and a minimum above its maximum | 1 |
-| `consistent.csv` | everything agrees; three checks run and report nothing | 0 |
+| `consistent.csv` | everything agrees; five checks run, compare 11 pairs of numbers, and report nothing | 0 |
 
 ```bash
 adds-up volume-tiers.csv
@@ -33,7 +33,8 @@ wrong, this is where the cause usually is.
 
 **`consistent.csv` exits 0 and says what that means** — "a statement about the
 checks that ran, listed above, and about nothing else". It does not say the
-price list is fine.
+price list is fine. Note the comparison count beside it: exit 0 is earned by
+arithmetic having happened, not by checks having reported that they ran.
 
 ## Two things these files deliberately do not show
 

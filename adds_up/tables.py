@@ -108,11 +108,12 @@ class Cell:
     ``decimals`` is ``None`` when nothing is known about the formatting, which
     is the honest answer for a CSV: its text is its format.
 
-    ``slots=True`` is not a micro-optimisation here. A price list read from a
-    published hospital file is 300,000 rows of 25 columns, which is 7.5 million
-    of these; without slots each one carries a dictionary and the file needs
-    several gigabytes to open. The memory this still costs is measured and
-    published in the README, because it is the tool's hardest limit.
+    ``slots=True`` is not a micro-optimisation here. The largest published
+    file in the reference corpus is 93,954 rows of 285 columns, which is 26.8
+    million of these; without slots each one carries a dictionary of its own
+    and the file needs several gigabytes more to open. The memory this still
+    costs is measured and published in the README, because it is the tool's
+    hardest limit.
     """
 
     text: str
@@ -172,8 +173,9 @@ def find_header(grid: list[list[str]], score=None) -> tuple[int, str]:
     A published file often has a **title block above** the header — the CMS
     standard-charges template puts metadata names on row 1, metadata values on
     row 2 and the real column names on row 3, and all three look like headers.
-    Taking the last candidate handles that, and it is what 95 of 99 files in
-    the reference corpus need.
+    Taking the last candidate handles that, and it is what almost every file
+    in the hospital corpus needs; the measurement reports the distribution of
+    the rows actually chosen.
 
     But a price list just as often has a **sub-header below** — a units row, a
     category banner, a second language — and there the last candidate is the
@@ -212,7 +214,10 @@ def find_header(grid: list[list[str]], score=None) -> tuple[int, str]:
     if best == 0:
         return 0, "the first row"
     return best, (
-        f"row {best + 1}, the last header-shaped row above the data; "
+        f"row {best + 1}, the only header-shaped row above the data with data "
+        f"under it; {best} row(s) above it were read as a title block"
+        if len(candidates) == 1 else
+        f"row {best + 1}, the last of {len(candidates)} header-shaped row(s); "
         f"{best} row(s) above it were read as a title block"
     )
 
@@ -400,6 +405,12 @@ def read(
             strings = _shared_strings(archive)
             styles = _styles(archive)
             tables = []
+            available = [name for name, _ in _sheet_targets(archive)]
+            if sheet and sheet not in available:
+                raise UnreadableFile(
+                    f"{path.name} has no worksheet called {sheet!r}. It has: "
+                    + ", ".join(repr(name) for name in available)
+                )
             for name, target in _sheet_targets(archive):
                 if sheet and name != sheet:
                     continue

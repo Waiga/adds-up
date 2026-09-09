@@ -148,8 +148,8 @@ number of pairs of *numbers* it actually compared, and a run that compared
 none exits 2. The two are different, and an adversarial review found the gap
 between them: `unit-mismatch` needs no numbers at all, so a price list with a
 genuine inverted tier — whose price column had a heading the vocabulary did
-not know — exited 0 because the units were consistent. Three checks had
-"run". Nothing had been compared.
+not know — exited 0 because the units were consistent. One check had "run".
+Nothing had been compared.
 
 | | needs | reports |
 |---|---|---|
@@ -162,6 +162,20 @@ not know — exited 0 because the units were consistent. Three checks had
 | **unit-mismatch** | an item and a unit or currency | one item priced in two units, or two currencies |
 
 ### Decisions inside them worth writing down
+
+**A percentage may only be compared with the price it is a percentage of.**
+Where a document holds several net-price columns, the percentage pairs only
+with the one that is its own name with the last word changed —
+`…|negotiated_percentage` with `…|negotiated_dollar` — unless there is exactly
+one candidate, in which case there is nothing to choose between. A published
+file puts a discounted cash price beside that pair, and a gross charge times a
+negotiated percentage has no reason whatever to equal a cash price. Where a
+file left its negotiated dollar column empty throughout, falling back to the
+nearest other price produced a finding on every row of it.
+
+If nothing qualifies, the percentage cannot be placed and the check says so.
+That is a check declining to run, which is a different thing from a check
+finding nothing, and the report keeps them apart.
 
 **A finding needs every candidate pairing to fail, not the nearest one.**
 Where two columns both name a list price, binding the percentage to the nearer
@@ -197,6 +211,19 @@ count appears in the report under *seen and not judged*.
 all mean nothing was printed. Treating any of them as zero would make every
 incomplete row an inverted range.
 
+**A free-text note is a qualifier.** A note attached to a row is by
+definition something about that row the other columns do not say, so two rows
+carrying different notes are two rows the document itself is separating. This
+was not a design decision; it came out of a hand audit in which ten of thirty
+`two-prices` findings were pairs of rows identical but for a note reading
+`Gross Charge Type: Sta` against `Gross Charge Type: Fee`. Recognising notes
+took the count on the same files from 91,760 findings to 5,221, and a re-audit
+of the survivors found 22 of 22 correct.
+
+The cost is real and worth naming: a genuine duplicate whose notes happen to
+differ trivially is now silent. That is the right direction for a tool whose
+findings are accusations.
+
 **Qualifiers are part of an item's identity.** A price list that quotes one
 product in GBP for the UK and EUR for the EU is a normal document. So
 `two-prices` and `unit-mismatch` both hold every recognised qualifier column
@@ -214,8 +241,8 @@ names it. A tier table often prints both an ordinal (`tier`) and a threshold
 
 **An adjustment column is added to the rate.** A per-unit adder is part of the
 per-unit price, and comparing bare rates while one band carries an adder and
-another does not compares two different things. 66,369 tiers in the reference
-corpus carry one.
+another does not compares two different things. 32,996 of the 75,969 tier rows
+in the reference corpus carry one.
 
 ## What was considered and rejected
 
