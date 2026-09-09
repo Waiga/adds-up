@@ -103,7 +103,8 @@ cannot run against it at all, and the measurement records that as six
 and just as importantly, **column recognition against headers this project did
 not write** — measured at **8,519 distinct column names** across the 173 CSVs
 in it, from files authored independently by different hospitals and different
-vendors.
+vendors. The other 27 files are JSON documents named `.csv` and the tool
+refuses them by name; they contribute no column names to that figure.
 
 **Collected.** 9 September 2026.
 
@@ -170,15 +171,18 @@ in that order. A row is kept when all of the following hold:
 **Rule 4 does not check that the file is a CSV, and 27 of the 200 are not.**
 The CMS schema has a JSON form as well as a tabular one, it contains
 `standard_charge` too, and some hospitals publish it from a URL ending `.csv`.
-Those 27 files are in the corpus and are counted in every total here. They are
-the reason the raw column counts are what they are: read as CSV, one of them
-is a single row of up to 1.16 million comma-separated fields, and the 27
-between them account for 6,838,504 of the run's 6,852,483 columns — the other
-13,979 are the 173 real CSVs, holding 8,519 of the 661,590 distinct column
-names. The tool runs no check on any of the 27 and exits `2`, which is the
-right outcome, but the corpus is 173 price lists and 27 documents in another
-format, and `measure_hospital.py` now reports both splits so neither figure
-can be quoted for the other.
+Those 27 files stay in the corpus and are counted in the file totals here.
+
+**The tool now refuses them by name**, saying the file is a JSON document and
+not a table, and that changed the column figures the run reports. When it read
+them as tables, the run reported 6,852,483 columns and 661,590 distinct column
+names, of which only 13,979 and 8,519 came from a CSV — 99.8% of the columns
+and 98.7% of the names were JSON punctuation. The current run reports **13,979 columns and
+8,519 distinct column names**, which are the 173 real CSVs and nothing else.
+8,519 is the figure this corpus was collected for. The run exited `2` on all
+27 before and after, so nothing was ever invented out of one; what changed is
+that the reader is told why, and that no inflated figure is available to be
+quoted for the real one.
 
 Collection stops at the target count. Everything rejected is counted by
 reason, in `_index.json`. For the 200 files these numbers come from, the
@@ -412,23 +416,32 @@ The draw takes one finding per document and caps at 30, so a sample smaller
 than 30 is not a shortfall: it is every document in the corpus that produced
 the finding at all.
 
+The hospital corpus has been audited twice: once on the first run, whose 66
+hand-read findings turned up three defects in the tool, and again on the run
+after those were fixed. The second column gives the current draw.
+
 | Check | Corpus | Sample | What was read |
 |---|---|---|---|
 | volume-tier | tariffs | 30 findings, seed 11, one per tariff | the tier table's own printed rates and adjusters |
-| stated-discount | hospitals | **17** — all 17 documents with a finding | the gross, percentage and dollar printed on that row |
-| two-prices | hospitals | **30** of 52 documents, **plus 2 each from the 5 largest** | the two rows, and every column that might tell them apart |
-| inverted-range | hospitals | **5** — all 5 documents with a finding | the row's own printed minimum and maximum |
-| unit-mismatch | hospitals | **14** — all 14 documents with a finding | the rows, and the unit printed on each |
+| stated-discount | hospitals | **16** — all 16 documents with a finding (was 17) | the gross, percentage and dollar printed on that row |
+| two-prices | hospitals | **30** of 52 documents, **plus 2 each from the 2 largest the draw missed** | the two rows, and every column that might tell them apart |
+| inverted-range | hospitals | **4** — all 4 documents with a finding (was 5) | the row's own printed minimum and maximum |
+| unit-mismatch | hospitals | **12** — all 12 documents with a finding (was 14) | the rows, and the unit printed on each |
 | discount-tier | — | — | **no corpus exercises it** |
 | bundle-above-parts | — | — | **no corpus exercises it** |
 
 **The extra `two-prices` reads are there because one finding per document is
 the wrong sample when one document makes most of the findings.** The 30 drawn
-documents hold 23.4% of that check's 189,501 findings and four of its five
-largest were not drawn at all, so two findings were read by hand from each of
-the five biggest the draw missed, taking hand coverage to 90.7% of the check's
-findings. `tools/measure_hospital.py --per-document` writes the
-per-file counts that establish this.
+documents hold 57.5% of that check's 189,501 findings, and two of its five
+largest were not drawn, so two findings were read by hand from each of those
+two, taking hand coverage to **95.8%** of the check's findings.
+`tools/measure_hospital.py --per-document` writes the per-file counts that
+establish this.
+
+**Three of the four samples are every document that produced the finding**,
+which sounds like complete coverage and is not: they are 4, 12 and 16
+documents. A rate from a sample that size is a floor with a wide interval
+around it, and the README says so where it quotes one.
 
 Redraw any of them with:
 

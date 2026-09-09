@@ -133,6 +133,13 @@ a group either, so `1234.567` is a decimal. What remains genuinely
 undecidable is one separator, exactly three digits after it, one to three
 digits in front: `1.234`. That is refused.
 
+**A percentage column is refused on the same principle.** The column's name
+says it holds a percentage; two writings of one are in circulation, `85` and
+`0.85`, and they differ by a factor of a hundred. A cell printing `%`, or a
+cell above 1, settles it. A column in which every value lies between 0 and 1
+is settled by neither and is refused. Of the 1,623 columns given a percentage
+role across 173 published files, that is 22 columns in 4 files.
+
 **A blank is never a zero.** `""`, `-`, `—`, `N/A`, `nil`, `TBD`, `#N/A` and
 their friends all mean *nothing was printed*. A row with a blank maximum is
 not a row with a maximum of zero.
@@ -204,32 +211,53 @@ benchmark, no index.
   was expected to be the commonest cause of a wrong finding, and on a Czech
   transit fare list it produced 2,396 of them; on the hospital corpus it
   caused none of the five found by hand.
-- **A row with more cells than the header.** An unquoted comma inside a
-  free-text field shifts every column after it, and the tool goes on reading
-  whatever now sits under each heading without saying that the row is the
-  wrong width. **This is the largest measured source of wrong findings in
-  this work.** One published standard-charges file carries 180,084 such rows
-  out of 1,342,453; every one of the 1,517 rows in it where the minimum
-  exceeds the maximum is a shifted row, and not one well-formed row has that
-  defect. The same shift makes the tool report a drug "priced in 2 different
-  units: inpatient, outpatient". There is no warning for this and no flag to
-  suppress it. A file with ragged rows should not be trusted to this tool.
-- **A percentage column that holds a fraction.** The CMS schema means 85% by
-  `85`, and some hospitals write `0.85`. Nothing in a column of numbers
-  between 0 and 1 distinguishes 0.85 meaning 85% from 0.85 meaning 0.85%, and
-  a role is never inferred from contents, so the tool takes the column at the
-  schema's word and the arithmetic it prints is out by a factor of a hundred.
-  One published file writes fractions throughout: 11,230 of its 11,240
-  `stated-discount` findings reconcile exactly under the other reading, and
-  are therefore false.
-- **A unit that differs only in case.** `ML` and `mL` are reported as two
-  different units for the same item — and the item itself was matched across a
-  description differing in case in exactly the same way. Every
-  `unit-mismatch` finding in one published file is this and nothing else.
-- **A file that is not a table at all.** A JSON document named `.csv` is read
-  as a single very wide row. No check finds a column it can use, the run exits
-  `2`, and nothing is invented — but the report never says the file is not a
-  table, and the column count in it is meaningless.
+- **A row that does not fit the header line is set aside, and that has its own
+  cost.** An unquoted comma inside a free-text field splits one field into two
+  and pushes every value after it one column to the right, so a row with more
+  cells than the header line is not read at all, and the report says how many
+  were set aside. **A cell too many is not excused by being blank**: the cell
+  that falls off the end holds whatever the last column held, which is often
+  nothing, while the shift in the middle of the row is untouched. On the
+  corpus that rule set aside 190,547 rows across 19 files.
+
+  A row is judged against the header **line** and not against the headings
+  that have names, because published files break both ways. One ends its
+  header line in a comma, giving 25 headings of which the last is empty above
+  1,444,617 rows of 24 cells — so a row need not reach an unnamed column.
+  Another ends its header line in three commas and puts a value in the last of
+  the columns those commas open — so the unnamed columns cannot be dropped
+  either. A row that fails to reach a *named* column is set aside; 2 rows in
+  the whole corpus did.
+
+  **The cost is a file whose writer puts a trailing comma on its data rows but
+  not on its header.** Every row in it is one cell too wide, none is read, and
+  the run exits `2` saying so. No file in the corpus does that, and the
+  failure is loud rather than silent, but it is a file this tool will not
+  read.
+- **A percentage column of fractions is refused, not read either way.** The
+  CMS schema means 85% by `85`, and some hospitals write `0.85`. Nothing in a
+  column whose every value lies between 0 and 1 distinguishes the two, so the
+  column is refused and `stated-discount` does not run on it — the same
+  answer the number reader gives an undecidable thousands separator. It is
+  decidable in two ways, and both are the document speaking: a cell printing a
+  `%` sign, or a cell holding more than 1, which a fraction of a price is not.
+  **The residual risk runs one way.** A file writing fractions that also
+  prices something above the gross charge puts a value over 1 in the column
+  and is read as percentages. And a refusal is a real loss, measured: one
+  published file fell from 120,673 findings to 29,485, and the 91,188 it lost
+  came from columns holding `0.8` throughout — findings the hand audit had
+  judged *correct*, because that file's negotiated dollar holds the gross
+  charge on 120,698 of its 120,728 rows, so the rows contradict themselves
+  under either reading. The tool no longer says so.
+- **A unit is compared case-insensitively, like the item beside it.** `ML` and
+  `mL` are one unit. The cost is the mirror of the gain: a document that
+  genuinely means two things by two capitalisations of one unit code is not
+  reported, and no such document has been seen.
+- **A JSON document named `.csv` is refused by name.** The run exits `2` and
+  says the file is not a table. The test is the first non-blank character
+  being `{` or `[` with a JSON key after it, which is a shape test and not a
+  parse: a price list that opened that way and had a quoted colon early in it
+  would be refused wrongly.
 
 ## What the offline promise does and does not cover
 

@@ -88,5 +88,13 @@ The most valuable issue you can open. Include the two rows, the column headers
 above them, and what the document actually means. The causes found so far, in
 the order they were measured, are a qualifier column the vocabulary does not
 know, a row carrying more cells than the header, a percentage column holding a
-fraction, and a unit compared case-sensitively. The first is a one-line fix
-with a test; the others are not.
+fraction, and a unit compared case-sensitively. The last three were found by
+hand-reading 66 real findings back against their files, and all three are now
+fixed — a ragged row is not read, a percentage column that could be either
+writing is refused, and a unit is folded like the item beside it. The first
+remains open and is a one-line fix with a test.
+
+Every one of those four was found by running the tool over documents it had
+never seen, with the suite green. If you are adding a check, that is the bar:
+tests prove it does what you meant, and only a real corpus tells you whether
+what you meant was right.
