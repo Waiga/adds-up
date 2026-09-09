@@ -67,6 +67,7 @@ def measure(directory: Path, sample_size: int, seed: int):
         "bytes_total": 0,
     }
     pool: dict[str, list] = {name: [] for name in CHECK_NAMES}
+    pooled: dict[str, set] = {name: set() for name in CHECK_NAMES}
 
     for path in files:
         size = path.stat().st_size
@@ -116,6 +117,14 @@ def measure(directory: Path, sample_size: int, seed: int):
                     totals["documents_with_a_finding"][check.name] += 1
                 for finding in check.findings:
                     totals["findings"][check.name] += 1
+                    # Only the first finding per file is kept. The audit draw
+                    # deduplicates by file anyway, so this changes nothing
+                    # about the sample — and a wide file can produce a hundred
+                    # thousand findings, which held in full across 200 files
+                    # would need more memory than the analysis itself.
+                    if path.name in pooled[check.name]:
+                        continue
+                    pooled[check.name].add(path.name)
                     pool[check.name].append({
                         "file": path.name,
                         "sheet": finding.places[0].sheet if finding.places else "",
@@ -150,10 +159,7 @@ def measure(directory: Path, sample_size: int, seed: int):
         if not entries:
             continue
         # One finding per file, so a single hospital cannot fill the sample.
-        by_file: dict[str, dict] = {}
-        for entry in entries:
-            by_file.setdefault(entry["file"], entry)
-        unique = sorted(by_file.values(), key=lambda e: e["file"])
+        unique = sorted(entries, key=lambda e: e["file"])
         samples[name] = rng.sample(unique, min(sample_size, len(unique)))
     return totals, samples
 

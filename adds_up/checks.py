@@ -461,6 +461,32 @@ def _nearest(target: Column, candidates: list[Column]) -> Column:
     return best
 
 
+def _pairable(percent_column: Column, candidates: list[Column]) -> list[Column]:
+    """The net-price columns a percentage may legitimately be compared against.
+
+    One candidate: it, because there is nothing to choose between.
+
+    Several: only those whose name is this one's with the last word changed —
+    ``…|negotiated_percentage`` and ``…|negotiated_dollar``. A published file
+    puts a cash price beside those two, and a gross charge times a negotiated
+    percentage has no reason whatever to equal a cash price. Where the
+    negotiated dollar column is empty throughout a file, falling back to the
+    cash price produced a finding on every row of it.
+
+    None qualifying means the percentage cannot be placed, and the check says
+    so rather than comparing it with whatever is nearest.
+    """
+    if len(candidates) == 1:
+        return candidates
+    words = fold(percent_column.name).split()
+    return [
+        column for column in candidates
+        if (lambda other: len(other) == len(words) and other[:-1] == words[:-1])(
+            fold(column.name).split()
+        )
+    ]
+
+
 def stated_discount(reader: Reader) -> CheckRun:
     """Does the percentage printed beside two prices produce the second from the first?
 
@@ -502,15 +528,32 @@ def stated_discount(reader: Reader) -> CheckRun:
         readable_lists = [
             c for c in candidate_lists if reader.conventions.get(c.index) is not None
         ]
+        # The pairing is decided against every net column the document has,
+        # and only then filtered to the readable ones. Deciding it against the
+        # readable subset first would let an empty negotiated-dollar column
+        # leave a cash price as the only candidate — which is exactly the
+        # comparison this rule exists to refuse.
+        pairable = _pairable(percent_column, candidate_nets)
         readable_nets = [
-            c for c in candidate_nets if reader.conventions.get(c.index) is not None
+            c for c in pairable if reader.conventions.get(c.index) is not None
         ]
         if reader.conventions.get(percent_column.index) is None:
             refused.append(reader.unreadable(percent_column))
         elif not readable_lists:
             refused.append(reader.unreadable(candidate_lists[0]))
         elif not readable_nets:
-            refused.append(reader.unreadable(candidate_nets[0]))
+            refused.append(
+                f"'{percent_column.label}' could not be placed against any of the "
+                f"{len(candidate_nets)} net price column(s) here"
+                + (
+                    ": none of them is this column's name with the last word "
+                    "changed, and a percentage compared with an unrelated price "
+                    "is not a comparison"
+                    if not pairable else
+                    f": the {len(pairable)} that could be paired with it hold no "
+                    "number this tool could use"
+                )
+            )
         else:
             usable.append((readable_lists, readable_nets, percent_column, is_discount))
     if not usable:

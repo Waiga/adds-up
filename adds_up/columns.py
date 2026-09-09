@@ -165,6 +165,14 @@ SUFFIX: tuple[tuple[str, str], ...] = (
 #: being written out. Plurals are listed rather than stemmed: guessing that a
 #: trailing ``s`` is a plural turns ``status`` into ``statu``.
 QUALIFIER: tuple[str, ...] = (
+    # A free-text note attached to a row is, by definition, something about
+    # that row the other columns do not say. Where two otherwise identical
+    # rows carry different notes, the document is distinguishing them and this
+    # tool should not overrule it. Ten of thirty audited `two-prices` findings
+    # were two rows separated only by a note reading "Gross Charge Type: Sta"
+    # against "Gross Charge Type: Fee".
+    "notes", "note", "comment", "comments", "remark", "remarks",
+    "additional generic notes", "additional payer notes", "footnote",
     # An amount, not a unit: two rows for the same drug covering different
     # amounts are two prices for two things, so it separates them.
     "drug unit of measurement", "drug unit of measure",

@@ -163,6 +163,39 @@ class StatedDiscount(unittest.TestCase):
         text = "Item,standard_charge|gross,standard_charge|X|Y|negotiated_percentage,standard_charge|X|Y|negotiated_dollar\nA,100.00,30,70.00\n"
         self.assertEqual(len(statements(run(text), "stated-discount")), 1)
 
+    def test_a_percentage_is_not_compared_with_an_unrelated_price(self):
+        """A cash price sits beside the negotiated pair and is not part of it.
+
+        Where a file leaves the negotiated dollar column empty throughout,
+        falling back to the nearest other price produced a finding on every
+        row: a gross charge times a negotiated percentage has no reason to
+        equal a cash price.
+        """
+        text = (
+            "Item,standard_charge|gross,standard_charge|discounted_cash,"
+            "standard_charge|negotiated_dollar,standard_charge|negotiated_percentage\n"
+            "A,47.25,22.21,,79.2\n"
+            "B,50.00,25.00,,80.0\n"
+        )
+        run_result = check(run(text), "stated-discount")
+        self.assertFalse(run_result.ran)
+        self.assertIn("could not be placed", run_result.reason)
+
+    def test_the_right_one_of_several_net_columns_is_used(self):
+        text = (
+            "Item,standard_charge|gross,standard_charge|discounted_cash,"
+            "standard_charge|negotiated_dollar,standard_charge|negotiated_percentage\n"
+            "A,100.00,10.00,30.00,30\n"
+            "B,100.00,10.00,70.00,30\n"
+        )
+        found = statements(run(text), "stated-discount")
+        self.assertEqual(len(found), 1)
+        self.assertIn("70.00", found[0])
+
+    def test_one_net_column_needs_no_evidence_of_which(self):
+        text = "Item,List price,Discount %,Net price\nA,100.00,10,88.00\n"
+        self.assertEqual(len(statements(run(text), "stated-discount")), 1)
+
     def test_a_zero_list_price_is_skipped_rather_than_divided_by(self):
         text = "Item,List price,Discount %,Net price\nA,0.00,10,0.00\n"
         self.assertEqual(statements(run(text), "stated-discount"), [])
@@ -191,6 +224,20 @@ class TwoPrices(unittest.TestCase):
 
     def test_a_qualifier_column_tells_two_rows_apart(self):
         text = "SKU,Region,Price\nA,UK,10.00\nA,US,12.00\n"
+        self.assertEqual(statements(run(text), "two-prices"), [])
+
+    def test_a_note_column_separates_two_rows(self):
+        """A free-text note is the document saying these rows are different.
+
+        Ten of thirty audited findings on real files were two rows identical
+        but for a note reading "Gross Charge Type: Sta" against "Gross Charge
+        Type: Fee".
+        """
+        text = (
+            "SKU,additional_generic_notes,Price\n"
+            "A,Gross Charge Type: Sta,10.00\n"
+            "A,Gross Charge Type: Fee,12.00\n"
+        )
         self.assertEqual(statements(run(text), "two-prices"), [])
 
     def test_the_finding_says_what_the_rows_agreed_on(self):
