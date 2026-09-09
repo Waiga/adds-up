@@ -115,7 +115,11 @@ EXACT: dict[str, tuple[str, ...]] = {
     "unit": (
         "unit", "uom", "unit of measure", "measure", "per", "units of measure",
         "unit type", "pricing unit", "unit of measurement",
-        "drug unit of measurement",
+        # `drug_type_of_measure(ment)` holds the unit — ML, GR, UN — and
+        # `drug_unit_of_measure(ment)` holds the *amount*. The names read the
+        # other way round, and reading them that way had this tool reporting
+        # that a drug was "priced in 2 different units: 1357.2 and 8".
+        "drug type of measurement", "drug type of measure",
     ),
     "minimum": (
         "min", "minimum", "min price", "minimum price", "lower", "lower bound",
@@ -161,7 +165,10 @@ SUFFIX: tuple[tuple[str, str], ...] = (
 #: being written out. Plurals are listed rather than stemmed: guessing that a
 #: trailing ``s`` is a plural turns ``status`` into ``statu``.
 QUALIFIER: tuple[str, ...] = (
-    "modifiers", "drug type of measurement", "rider category", "fare media",
+    # An amount, not a unit: two rows for the same drug covering different
+    # amounts are two prices for two things, so it separates them.
+    "drug unit of measurement", "drug unit of measure",
+    "modifiers", "rider category", "fare media",
     "payment method", "transfers", "agency", "network", "methodology",
     "region", "country", "territory", "zone", "state", "market", "location",
     "customer", "customer group", "channel", "segment", "tier name", "plan",

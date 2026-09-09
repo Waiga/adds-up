@@ -38,11 +38,53 @@ BUILTIN_DECIMALS = {
     2: 2, 4: 2, 7: 2, 8: 2, 10: 2, 11: 2, 39: 2, 40: 2, 43: 2, 44: 2,
 }
 
+#: The largest a single part of an .xlsx may declare itself to be once
+#: unpacked. An .xlsx is a zip, a zip can claim to hold far more than it does,
+#: and this tool reads files people were sent rather than files they wrote. A
+#: real worksheet part of a gigabyte is already past what the tool can hold in
+#: memory, so refusing at that point costs nothing and closes the hole.
+LARGEST_PART = 1 << 30
+
 _CELL_REF = re.compile(r"^([A-Z]+)(\d+)$")
 
 
 class UnreadableFile(Exception):
     """The file could not be read as a table at all."""
+
+
+def _part(archive: zipfile.ZipFile, name: str) -> bytes:
+    """Read one part of a workbook, refusing two things before parsing it.
+
+    **A part that claims to unpack to more than a gigabyte.** A zip's headers
+    are self-declared, so a few kilobytes can claim to be a terabyte; reading
+    it is how a tool gets killed by a file somebody emailed.
+
+    **A part that declares an XML document type.** ``xml.etree`` expands
+    internal entities, so a DOCTYPE with a nested entity is the billion-laughs
+    attack and needs no external network access to work. No legitimate part of
+    an .xlsx carries one, so the presence of the declaration is enough to
+    refuse — which is a blunter rule than disabling the handler, and a rule
+    that cannot be got round by a handler being reattached.
+    """
+    try:
+        info = archive.getinfo(name)
+    except KeyError as error:
+        raise KeyError(name) from error
+    if info.file_size > LARGEST_PART:
+        raise UnreadableFile(
+            f"{name} in this .xlsx declares itself to be "
+            f"{info.file_size / (1 << 20):.0f} MB once unpacked, which this tool "
+            "will not read"
+        )
+    data = archive.read(name)
+    head = data[:4096].lstrip()
+    if b"<!DOCTYPE" in head or b"<!ENTITY" in data[:65536]:
+        raise UnreadableFile(
+            f"{name} in this .xlsx declares an XML document type. No part of a "
+            "spreadsheet needs one, and expanding it is how a small file "
+            "becomes an unbounded one, so it is refused."
+        )
+    return data
 
 
 @dataclass(slots=True)
@@ -179,7 +221,7 @@ def _format_decimals(code: str) -> int:
 def _styles(archive: zipfile.ZipFile) -> list[int | None]:
     """Decimal places per cell-format index, or ``None`` where unknown."""
     try:
-        root = ElementTree.fromstring(archive.read("xl/styles.xml"))
+        root = ElementTree.fromstring(_part(archive, "xl/styles.xml"))
     except (KeyError, ElementTree.ParseError):
         return []
     custom: dict[int, str] = {}
@@ -211,7 +253,7 @@ def _styles(archive: zipfile.ZipFile) -> list[int | None]:
 
 def _shared_strings(archive: zipfile.ZipFile) -> list[str]:
     try:
-        root = ElementTree.fromstring(archive.read("xl/sharedStrings.xml"))
+        root = ElementTree.fromstring(_part(archive, "xl/sharedStrings.xml"))
     except (KeyError, ElementTree.ParseError):
         return []
     strings = []
@@ -229,8 +271,8 @@ def _sheet_targets(archive: zipfile.ZipFile) -> list[tuple[str, str]]:
     the caller.
     """
     try:
-        root = ElementTree.fromstring(archive.read("xl/workbook.xml"))
-        rels = ElementTree.fromstring(archive.read("xl/_rels/workbook.xml.rels"))
+        root = ElementTree.fromstring(_part(archive, "xl/workbook.xml"))
+        rels = ElementTree.fromstring(_part(archive, "xl/_rels/workbook.xml.rels"))
     except (KeyError, ElementTree.ParseError):
         return []
     targets = {
@@ -256,7 +298,7 @@ def _read_xlsx_sheet(
 ) -> list[list[Cell]]:
     grid: list[list[Cell]] = []
     try:
-        data = archive.read(target)
+        data = _part(archive, target)
     except KeyError:
         return grid
     root = ElementTree.fromstring(data)

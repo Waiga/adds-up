@@ -221,23 +221,26 @@ flat — straight from the raw export. The two agree almost exactly:
 | rising | 10,711 | 10,709 |
 | mixed (falls, then rises) | 1,341 | 1,341 |
 
-The two rising ladders with no finding are among the 316 whose rate column was
-refused as undecidable. Nothing falling or flat was reported.
+The 316 documents whose rate column was refused break down as 313 falling, 2
+rising and 1 flat — which accounts for the two rising ladders with no finding
+exactly. **Nothing falling or flat was reported anywhere in the corpus.**
 
-**And 30 of 30 are also not mistakes.** This is the number that matters and it
-is not a flattering one. Every finding in the audited sample is deliberate
-pricing:
+**And 29 of the 30 are also not mistakes.** This is the number that matters
+and it is not a flattering one:
 
 - **11 of 30 have a first band priced at zero** — an allowance included in a
   fixed charge, or the threshold above which a demand charge starts. That is
-  not an inverted tier at all. The tool prints a note on these; across the
-  whole corpus they are 4,404 of the 15,487 findings, **28%**.
-- **The rest are inclining block tariffs**, which are conservation pricing and
+  not an inverted tier in any useful sense. The tool prints a note on these;
+  across the whole corpus they are 4,404 of the 15,487 findings, **28%**.
+- **18 of 30 are inclining block tariffs**, which are conservation pricing and
   entirely intentional. 6,254 of the 10,020 residential rate structures in
   this corpus produce a finding, against 4,726 of 14,565 commercial ones.
-- **One of the thirty looks like a data defect** rather than a pricing choice:
-  a seven-tier industrial ladder whose thresholds run 3,000 / 10,000 / 200,000
-  / 200 / 400 / 600, which is two rate blocks concatenated into one.
+- **1 of 30 looks like a data defect** rather than a pricing choice: a
+  seven-tier industrial ladder whose thresholds run 3,000 / 10,000 / 200,000 /
+  200 / 400 / 600, which is two rate blocks concatenated into one.
+
+So on this corpus the check is **100% arithmetically right and about 3%
+useful**. Both halves of that are worth publishing.
 
 **So this corpus establishes that the check's arithmetic is right at scale,
 and establishes nothing whatever about how often an inverted tier is a

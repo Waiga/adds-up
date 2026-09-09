@@ -120,7 +120,10 @@ reason a third of its URLs no longer resolve.
 in that order. A row is kept when all of the following hold:
 
 1. a `HEAD` request returns a status and a non-zero `Content-Length`;
-2. that length is **under 40 MB**;
+2. that length is **under 40 MB** — this is the size of the *download*, and
+   many hospitals publish a zip, so a file that passes the cap at 2.7 MB can
+   unpack to 83 MB of CSV. The largest file in the collected corpus is
+   **1,083 MB** of CSV from a download well under the cap;
 3. the body downloads, and if it is a zip, it contains a `.csv`;
 4. the first 16 kB of that CSV contains the string `standard_charge`, which is
    how a current CMS-template file is told from a pre-2022 chargemaster with a
@@ -130,14 +133,22 @@ Collection stops at the target count. Everything rejected is counted by
 reason, and those counts are published beside the results.
 
 **The bias this creates, stated plainly.** The 40 MB cap is not neutral. Real
-standard-charges files run to hundreds of megabytes, and the ones that fit
-under the cap are systematically the smaller hospitals — behavioural health
-units, critical-access hospitals, single-site facilities — with shorter
-chargemasters and fewer payer contracts. A large teaching hospital's file, in
-the wide format with several hundred payer-plan blocks, is not in this corpus.
-The 40 MB cap was chosen so the corpus could be collected and re-collected in
-under an hour, and it is the reason this corpus is a few hundred documents
-rather than several thousand.
+standard-charges files run to hundreds of megabytes, and a hospital that
+publishes an uncompressed file is more likely to be excluded than one that
+zips the same content. The corpus therefore over-represents smaller hospitals
+— behavioural health units, critical-access hospitals, single-site facilities
+— with shorter chargemasters and fewer payer contracts, and it
+under-represents any large system that publishes raw CSV.
+
+It does not exclude large files altogether: the zip exception lets several
+hundred-megabyte documents through, and the corpus spans 8.6 GB of CSV with a
+median of 5.9 MB and a maximum of 1,083 MB. That spread is useful — it is what
+produced the tool's memory and timing numbers — but it is a spread that fell
+out of the rule rather than one the rule was designed to give.
+
+The cap was chosen so the corpus could be collected and re-collected in under
+an hour, and it is why this corpus is a few hundred documents rather than
+several thousand.
 
 **Reproduce it.**
 
@@ -178,7 +189,68 @@ rather than implying otherwise.
 
 ---
 
-## A corpus that was tried and rejected
+## Where else was looked, and what was there
+
+Two corpora is not a design preference. It is what a survey of the obvious
+alternatives produced, and the survey is recorded because "we looked" is worth
+something and because the next person should not have to repeat it.
+
+### Open government data portals
+
+Searched on 9 September 2026, through each portal's own API, for *price list*,
+*fee schedule*, *rate schedule*, *tariff*, *price schedule*, *fees and
+charges*, *unit price*, *pricing* and *charges*, plus the equivalents in
+Polish, French, Italian, Dutch, German and Slovak.
+
+| portal | working API form |
+|---|---|
+| data.gov | `https://catalog.data.gov/search?q=…` with `Accept: application/json` — **the CKAN API at `/api/3/action/*` is gone**, every action 404s |
+| data.gov.uk | `https://ckan.publishing.service.gov.uk/api/3/action/package_search` (the `data.gov.uk` path 301s here) |
+| open.canada.ca | `https://open.canada.ca/data/api/3/action/package_search` |
+| data.gov.au | `https://data.gov.au/data/api/3/action/package_search` |
+| Socrata | `http://api.us.socrata.com/api/catalog/v1?q=…` |
+| data.europa.eu | `https://data.europa.eu/api/hub/search/search?q=…` |
+| GSA CALC | **gone** — `calc.gsa.gov/api/rates/` 404s, `api.calc.gsa.gov` does not resolve, and `buy.gsa.gov` is behind single sign-on. There is no public contract labour-rate API today. |
+
+Twelve terms across six portals gave **3,802 unique CSV or XLSX download
+URLs**. Of those, **43** have a title that names a price list or a fee
+schedule. A random sample of 180 was downloaded and its headers read: 25 could
+not be fetched, and of the 54 that parsed as CSV, **three** were genuinely
+price lists — **a true-positive rate of about 1.7% for naive keyword
+harvesting**.
+
+The word does not mean the thing. *Tariff* returns surveys about the business
+impact of tariffs and feed-in-tariff capacity statistics. *Charges* returns
+electric vehicle charge points and penalty charge notices. A dozen files with
+a "Total Charges" column turned out to be hospital discharge records and
+inmate release logs.
+
+What is genuinely there, and is genuinely good, is concentrated and
+non-independent: Polish law obliges housing developers to publish a
+standardised apartment price list as open data, and 33 such titles republish
+near-daily, giving 1,908 dated snapshots of the same few dozen documents.
+Italian regional public-works price books, French transit tariffs and Canadian
+municipal fee schedules make up most of the rest.
+
+**So: 500+ price-list *files* can be assembled from data.europa.eu alone. 500
+price lists from 500 independent publishers cannot.** Four genuine ones were
+checked against this tool's own class of question and behaved exactly as it
+would want — a Campania public-works price book in which base price plus
+overheads plus profit equals the final price in 12,708 of 12,708 parseable
+rows, and a Polish developer price list in which area times price per square
+metre equals the price in 99 of 99, but only against the correct one of its
+two area columns.
+
+**One of them is a warning this tool took to heart.** A Czech integrated
+transport fare list shows 2,396 apparent "price falls as distance rises"
+violations when rows are grouped by tariff and distance alone, and **zero**
+once `validity_days` is part of the group. An under-specified group key does
+not produce a few wrong findings; it produces thousands. That is why
+`two-prices`, `unit-mismatch` and the tier checks hold every recognised
+qualifier column equal, and why the limitations document names an unrecognised
+qualifier as the most likely cause of a wrong finding on your file.
+
+### A corpus that was collected and then rejected
 
 **GTFS fare tables**, from the Mobility Database catalogue
 (`https://bit.ly/catalogs-csv`, 1,977 static feeds in 87 countries with stable

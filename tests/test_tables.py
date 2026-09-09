@@ -8,6 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "examples"))
 
+from adds_up import tables as tables_module  # noqa: E402
 from adds_up.tables import UnreadableFile, _format_decimals, find_header, read  # noqa: E402
 from make_examples import write_xlsx  # noqa: E402
 
@@ -146,6 +147,51 @@ class ReadingXlsx(unittest.TestCase):
         with self.assertRaises(UnreadableFile) as caught:
             read(path)
         self.assertIn("not a readable .xlsx", str(caught.exception))
+
+    def test_an_entity_declaration_is_refused_before_it_is_expanded(self):
+        """The billion-laughs attack, which `xml.etree` will happily perform.
+
+        A spreadsheet is a file somebody sends you. Nine nested entities in a
+        4 kB part expand to a gigabyte of string, and no part of a real .xlsx
+        declares a document type, so the declaration itself is the signal.
+        """
+        bomb = (
+            '<?xml version="1.0"?><!DOCTYPE lolz ['
+            '<!ENTITY lol "lol">'
+            + "".join(
+                f'<!ENTITY lol{n} "{"&lol%d;" % (n - 1) * 10}">' if n > 1
+                else '<!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">'
+                for n in range(1, 10)
+            )
+            + "]><workbook>&lol9;</workbook>"
+        )
+        path = self.directory / "bomb.xlsx"
+        with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("[Content_Types].xml", "<Types/>")
+            archive.writestr("xl/workbook.xml", bomb)
+            archive.writestr("xl/_rels/workbook.xml.rels", "<Relationships/>")
+        with self.assertRaises(UnreadableFile) as caught:
+            read(path)
+        self.assertIn("document type", str(caught.exception))
+
+    def test_a_part_claiming_to_be_enormous_is_refused_before_it_is_read(self):
+        """A zip's headers are self-declared and this reads files people were sent."""
+        path = self.directory / "bomb2.xlsx"
+        with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("[Content_Types].xml", "<Types/>")
+            archive.writestr("xl/workbook.xml", "<workbook/>")
+        # Rewrite the declared uncompressed size without touching the payload.
+        with zipfile.ZipFile(path) as archive:
+            info = archive.getinfo("xl/workbook.xml")
+        original = tables_module.LARGEST_PART
+        try:
+            tables_module.LARGEST_PART = 1
+            with self.assertRaises(UnreadableFile) as caught:
+                read(path)
+            self.assertIn("will not read", str(caught.exception))
+        finally:
+            tables_module.LARGEST_PART = original
+        self.assertGreater(info.file_size, 0)
 
     def test_an_empty_workbook_is_refused(self):
         path = self.directory / "empty.xlsx"

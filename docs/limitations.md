@@ -35,10 +35,10 @@ either is. Both may be exactly as intended.
 
 The clearest case is the volume-tier check. **Inclining block pricing —
 charging more per unit as consumption rises — is a deliberate and ubiquitous
-design in utility tariffs**, and in the reference corpus of 29,521 published
-tariffs it is what almost every volume-tier finding turns out to be. Those
-findings are arithmetically correct and are not mistakes. The check reports
-that a larger band is priced higher, in those words, and stops there.
+design in utility tariffs**. Thirty volume-tier findings from a corpus of
+29,521 published tariffs were read by hand: all thirty were arithmetically
+correct, and not one of the thirty was a mistake. The check reports that a
+larger band is priced higher, in those words, and stops there.
 
 The same applies elsewhere. A bundle above the sum of its parts may be a
 service package. The same item at two prices may be a legacy row somebody
@@ -86,10 +86,17 @@ other end is present, and a quantity otherwise. The report prints which
 reading it took. It will be wrong on a table that prints a price ceiling with
 no floor, or a band top beside an unrelated `min`.
 
-**Where several columns claim the same role, the leftmost is used**, and the
-report names it. On a file with fifty payer columns, the item, quantity and
-price used are the first of each. `--map` and `--sheet` are the way to point
-at a different one.
+**Where several columns claim the same role, the leftmost whose numbers can
+be read is used**, and the report names it. The "whose numbers can be read"
+part matters on a real file: a standard-charges file carries a cash price and
+a negotiated price side by side, and a hospital that publishes only the second
+leaves the first empty on every row. Taking the leftmost regardless meant the
+check reported that it could not run while a usable column sat beside the one
+it had chosen.
+
+On a file with fifty payer columns, the item, quantity and price used are
+still the first usable of each, which may not be the one you care about.
+`--map` and `--sheet` are how to point at a different one.
 
 ## What the number reader can and cannot do
 
@@ -120,6 +127,17 @@ from the cell's number format.** It quotes the stored value in the finding, so
 a cell displaying `42.50` and storing `42.50425` appears in the report as
 `42.50425`. The tolerance is right; the quotation may surprise a reader
 comparing it with what Excel shows them.
+
+## The report is as long as the findings
+
+There is no cap and no summary mode. A wide published file with several
+hundred payer columns and a systematic inconsistency produces tens of
+thousands of findings, and the tool prints all of them. On a file that size,
+use `--format json` and query it, or `--skip` the check that is dominating.
+
+That is a deliberate choice — truncating would mean the output no longer
+matched the exit code — but it does mean the text report is for a document a
+person could read, not for a chargemaster.
 
 ## What it does not read
 
