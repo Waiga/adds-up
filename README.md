@@ -60,6 +60,9 @@ What is left is the set of statements a document makes that cannot all be true
 at once. *"Tier 3 costs more per unit than tier 2"* is a finding. *"Your
 pricing is wrong"* is not, and never will be.
 
+The reasoning, and every check that was considered and rejected, is in
+[`docs/superpowers/specs/2026-09-09-adds-up-design.md`](docs/superpowers/specs/2026-09-09-adds-up-design.md).
+
 ## The second thing: a finding is not a defect
 
 The tool reports that two numbers in a document cannot both describe one
