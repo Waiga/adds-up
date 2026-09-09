@@ -133,6 +133,18 @@ class Table:
     #: Rows above the header, kept because a price list's title block often
     #: carries the currency or the unit the columns do not repeat.
     preamble: list[list[str]] = field(default_factory=list)
+    #: The line each kept row was printed on, counting from 1. Rows are
+    #: dropped — a blank one, a ragged one — so a row's position in ``rows``
+    #: is not its position in the file, and a finding must cite the file.
+    row_numbers: list[int] = field(default_factory=list)
+    #: Rows not read because their cell count does not match the header's.
+    #: Counted in both directions and reported, never silently discarded.
+    wider_than_header: int = 0
+    narrower_than_header: int = 0
+
+    @property
+    def set_aside_for_width(self) -> int:
+        return self.wider_than_header + self.narrower_than_header
 
     def column(self, index: int) -> list[str]:
         return [row[index].text if index < len(row) else "" for row in self.rows]
@@ -230,7 +242,36 @@ def find_header(grid: list[list[str]], score=None) -> tuple[int, str]:
 LARGEST_CELL = 16 * 1024 * 1024
 
 
+#: A JSON document does not become a table by being named ``.csv``, and 27 of
+#: the 200 files in the reference corpus are exactly that: the CMS schema's
+#: JSON form served from a URL ending ``.csv``. Read as delimited text one of
+#: them is a single row of up to 1.16 million fields. No check could ever find
+#: a column it could use, so the run already ended in exit 2 and invented
+#: nothing — but it never said *this is not a table*, and a reader had to
+#: infer it from a header a million columns wide.
+_JSON_KEY = re.compile(rb'"\s*:')
+
+
+def _looks_like_json(path: Path) -> bool:
+    with path.open("rb") as handle:
+        head = handle.read(65536)
+    stripped = head.lstrip(b"\xef\xbb\xbf").lstrip()
+    if stripped[:1] not in (b"{", b"["):
+        return False
+    # A bare bracket is not enough: a price list may open with one. A JSON
+    # object's first key is, and every form of the CMS JSON schema has one
+    # within the first block of the file.
+    return _JSON_KEY.search(stripped[:65536]) is not None
+
+
 def _read_csv_grid(path: Path) -> list[list[str]]:
+    if _looks_like_json(path):
+        raise UnreadableFile(
+            f"{path.name} is a JSON document, not a table. It is named like a "
+            "CSV and it does not hold rows and columns, so there is nothing "
+            "here for this tool to read. (Published price files are served "
+            "this way more often than the file name suggests.)"
+        )
     previous = csv.field_size_limit()
     try:
         csv.field_size_limit(LARGEST_CELL)
@@ -440,7 +481,9 @@ def read(
                     ) from error
                 if not grid:
                     continue
-                tables.append(_assemble(name, grid, header_row, score))
+                tables.append(
+                    _assemble(name, grid, header_row, score, positional=True)
+                )
             if not tables:
                 raise UnreadableFile(f"{path.name} holds no readable worksheet")
             return tables
@@ -451,8 +494,34 @@ def read(
 
 
 def _assemble(
-    name: str, grid: list[list[Cell]], header_row: int | None, score=None
+    name: str,
+    grid: list[list[Cell]],
+    header_row: int | None,
+    score=None,
+    positional: bool = False,
 ) -> Table:
+    """Cut a grid into a header and the rows under it.
+
+    ``positional`` says that a cell's place in its row is stated by the file
+    rather than counted from the delimiters. That is true of an .xlsx, where
+    every cell carries its own column reference, and false of a CSV, where a
+    single unquoted comma inside a free-text field shifts every value after it
+    into the wrong column.
+
+    So in delimited text **a row whose cell count is not the header line's is
+    not read**. Its values are under headings that are not theirs, and a value
+    that cannot be trusted must not become a finding; the count of what was
+    set aside is reported instead, which is the part that used to be silent.
+    One published standard-charges file carries 180,084 such rows out of
+    1,342,453, and every one of its 1,517 inverted ranges was one of them.
+
+    A row with a cell too many is not saved by that cell being blank. An
+    unquoted comma splits one field into two and pushes every field after it
+    one place right, so the cell that falls off the end holds whatever the
+    last column held — often nothing. Reading such a row because its tail
+    looks empty leaves the shift in the middle of it untouched, which is
+    exactly the defect this rule exists to stop.
+    """
     if not grid:
         raise UnreadableFile(f"{name} is empty")
     text_grid = [[cell.text for cell in row] for row in grid]
@@ -466,9 +535,37 @@ def _assemble(
     else:
         index, reason = find_header(text_grid, score)
     header = [cell.strip() for cell in text_grid[index]]
-    body = grid[index + 1:]
     width = len(header)
-    rows = [row for row in body if any(not _blank(c.text) for c in row[:width] or row)]
+    # A header line can end in commas, and what follows them is a column with
+    # no name — which no check can use, but which a data row may still fill.
+    # Two published files disagree about which happens: one has 25 headings
+    # with the last empty above 1,444,617 rows of 24 cells, and another has
+    # 24 headings with the last three empty above 27,356 rows of 24 cells
+    # that put a value in the last one. So a row is judged against both ends:
+    # it may not have more cells than the header line, and it must reach
+    # every heading that has a name.
+    named = 0
+    for position, label in enumerate(header):
+        if not _blank(label):
+            named = position + 1
+    rows: list[list[Cell]] = []
+    row_numbers: list[int] = []
+    wider = narrower = 0
+    for offset, row in enumerate(grid[index + 1:]):
+        count = len(row)
+        if not positional and (count > width or count < named):
+            # A blank row is a blank row whatever its width; only a row with
+            # something in it is a row that was not read.
+            if any(not _blank(cell.text) for cell in row):
+                if count > width:
+                    wider += 1
+                else:
+                    narrower += 1
+            continue
+        if not any(not _blank(c.text) for c in row[:width] or row):
+            continue
+        rows.append(row)
+        row_numbers.append(index + 2 + offset)
     return Table(
         name=name,
         header=header,
@@ -477,4 +574,7 @@ def _assemble(
         header_reason=reason,
         total_rows=len(grid),
         preamble=[row for row in text_grid[:index]],
+        row_numbers=row_numbers,
+        wider_than_header=wider,
+        narrower_than_header=narrower,
     )

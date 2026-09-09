@@ -78,6 +78,18 @@ class TableResult:
     #: the columns themselves do not repeat.
     preamble: list = field(default_factory=list)
     checks: list[CheckRun] = field(default_factory=list)
+    #: How many columns the header names, and how many rows were set aside
+    #: because their cell count was not that. A ragged row's values sit under
+    #: headings that are not theirs, so it is not read — and the fact that it
+    #: could not be read is reported, which is the part that used to be
+    #: silent.
+    header_width: int = 0
+    rows_wider_than_header: int = 0
+    rows_narrower_than_header: int = 0
+
+    @property
+    def rows_set_aside_for_width(self) -> int:
+        return self.rows_wider_than_header + self.rows_narrower_than_header
 
     @property
     def findings(self) -> list[Finding]:

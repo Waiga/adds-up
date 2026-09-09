@@ -365,5 +365,132 @@ class ReadingXlsx(unittest.TestCase):
             read(path)
 
 
+class ARowOfTheWrongWidth(unittest.TestCase):
+    """Rows whose cell count is not the header's are not read.
+
+    Every case here reproduces the *shape* of a real published file, named in
+    each test. No row of anyone's chargemaster is copied into this repository.
+    """
+
+    #: The shape of the header in
+    #: `0042-380050-930508781 Sky Lakes Medical Center Standard Charges 2025.csv`
+    #: — 29 columns, with a free-text description near the left and the
+    #: de-identified minimum and maximum ten columns to the right of it. An
+    #: unquoted comma in the description shifts both of them.
+    SKY_LAKES_SHAPE = (
+        "billing_class,description,code|1,standard_charge|gross,"
+        "De-Identified IP Max,De-Identified IP Min\n"
+    )
+
+    def test_a_row_with_more_cells_than_the_header_is_not_read(self):
+        path = temp("wide.csv", self.SKY_LAKES_SHAPE
+                    + "IP,A widget,100,50.00,80,20\n"
+                    + "IP,A widget, with a comma,200,50.00,80,20\n")
+        table = read(path)[0]
+        self.assertEqual(len(table.rows), 1)
+        self.assertEqual(table.wider_than_header, 1)
+        self.assertEqual(table.narrower_than_header, 0)
+
+    def test_a_row_that_does_not_reach_the_headings_is_not_read(self):
+        path = temp("narrow.csv", self.SKY_LAKES_SHAPE
+                    + "IP,A widget,100,50.00,80,20\n"
+                    + "IP,A widget,100\n")
+        table = read(path)[0]
+        self.assertEqual(len(table.rows), 1)
+        self.assertEqual(table.narrower_than_header, 1)
+
+    def test_the_rows_that_are_read_still_cite_their_own_line(self):
+        """A finding names a line in the file, so dropping a row cannot shift it."""
+        path = temp("lines.csv", self.SKY_LAKES_SHAPE
+                    + "IP,A widget, with a comma,200,50.00,80,20\n"
+                    + "IP,A widget,100,50.00,80,20\n")
+        table = read(path)[0]
+        self.assertEqual(table.row_numbers, [3])
+
+    def test_a_trailing_comma_on_the_header_does_not_condemn_every_row(self):
+        """The shape of `0125-041316-800370789_MCHS-SMC-REGIONAL-MEDICAL-CENTER`.
+
+        Its header line ends in a comma, so it parses to 25 headings of which
+        the last is empty, above 1,444,617 data rows of 24 cells. A row must
+        reach every heading that has a name; it need not reach one that has
+        none, or the whole file is lost.
+        """
+        path = temp("trailing.csv", "description,code|1,standard_charge|gross,\n"
+                                    "A widget,100,50.00\n"
+                                    "Another,101,60.00\n")
+        table = read(path)[0]
+        self.assertEqual(len(table.rows), 2)
+        self.assertEqual(table.set_aside_for_width, 0)
+
+    def test_a_row_may_fill_a_column_the_header_did_not_name(self):
+        """The shape of `0161-231330-381415390_deckerville-community-hospital`.
+
+        Its header line ends in three commas and its 27,356 data rows put a
+        value in the last of the columns those commas open. Dropping the
+        unnamed headings and then calling those rows too wide emptied the
+        file — measured, on the first run of this rule.
+        """
+        path = temp("unnamed.csv", "description,code|1,standard_charge|gross,,\n"
+                                   "A widget,100,50.00,,360\n")
+        table = read(path)[0]
+        self.assertEqual(len(table.rows), 1)
+        self.assertEqual(table.set_aside_for_width, 0)
+
+    def test_a_cell_past_the_header_line_is_not_excused_by_being_blank(self):
+        """An unquoted comma pushes the last field off the end, blank or not.
+
+        Reading a row because its tail looks empty leaves the shift in the
+        middle of it in place. On the first run of this rule that let 158,000
+        of one file's shifted rows through, and the check they corrupted lost
+        only two thirds of its wrong findings instead of all of them.
+        """
+        path = temp("blanktail.csv", "description,code|1,standard_charge|gross\n"
+                                     "A widget,100,50.00,\n")
+        table = read(path)[0]
+        self.assertEqual(len(table.rows), 0)
+        self.assertEqual(table.wider_than_header, 1)
+
+    def test_a_short_row_in_a_workbook_is_read(self):
+        """An .xlsx states each cell's column, so a short row is not shifted.
+
+        The rule is about delimited text, where position is counted from the
+        commas. A worksheet that simply stops writing cells at the last filled
+        one must not lose them.
+        """
+        path = self.directory / "short.xlsx"
+        write_xlsx(path, "Sheet1", [["SKU", "Quantity", "Unit price"],
+                                    ["A", 1, 10.0],
+                                    ["B"]])
+        table = read(path)[0]
+        self.assertEqual(len(table.rows), 2)
+        self.assertEqual(table.set_aside_for_width, 0)
+
+    def setUp(self):
+        self.directory = Path(tempfile.mkdtemp())
+
+
+class AJsonDocumentNamedCsv(unittest.TestCase):
+    """27 of the 200 files in the hospital corpus are this.
+
+    They are the CMS schema's JSON form served from a URL ending `.csv`, and
+    one of them reads as a single row of up to 1.16 million comma-separated
+    fields. No check could ever find a column in that, so the run already
+    ended in exit 2 and invented nothing — but it never said the file is not
+    a table, and a reader had to work it out from the column count.
+    """
+
+    def test_it_is_refused_and_says_it_is_not_a_table(self):
+        path = temp("standardcharges.csv",
+                    '{"hospital_name": "A Hospital", "standard_charge_information": []}')
+        with self.assertRaises(UnreadableFile) as caught:
+            read(path)
+        self.assertIn("JSON", str(caught.exception))
+        self.assertIn("not a table", str(caught.exception))
+
+    def test_a_price_list_whose_first_cell_starts_with_a_bracket_is_still_read(self):
+        path = temp("brackets.csv", "[group],Price\n[A],10.00\n")
+        self.assertEqual(len(read(path)[0].rows), 1)
+
+
 if __name__ == "__main__":
     unittest.main()

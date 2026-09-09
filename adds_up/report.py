@@ -20,6 +20,30 @@ def _rule(character: str = "-") -> str:
     return character * WIDTH
 
 
+def _width_lines(table) -> list[str]:
+    """What was set aside because its cell count was not the header's.
+
+    Silence here is the failure this reports. A row wider than the header has
+    a value under a heading that is not its own — an unquoted comma inside a
+    free-text field does it — and every check then reads the wrong column
+    without saying so. It was the largest measured source of wrong findings in
+    this tool's whole history, and there was no line in the report about it.
+    """
+    if not table.rows_set_aside_for_width:
+        return []
+    parts = []
+    if table.rows_wider_than_header:
+        parts.append(f"{table.rows_wider_than_header} with more cells than that")
+    if table.rows_narrower_than_header:
+        parts.append(f"{table.rows_narrower_than_header} not reaching every named column")
+    return [
+        f"{table.rows_set_aside_for_width} further row(s) were NOT read: they do "
+        f"not fit the {table.header_width} cell(s) on the header line "
+        f"({'; '.join(parts)}). The values in a row of the wrong width sit under "
+        "headings that are not theirs, so nothing in this report comes from them."
+    ]
+
+
 def text(result: Result, version: str) -> str:
     lines = [f"adds-up {version} — {result.path}", ""]
     for table in result.tables:
@@ -28,6 +52,8 @@ def text(result: Result, version: str) -> str:
         lines.append(
             f"{table.row_count} row(s) under a header read from {table.header_reason}."
         )
+        for line in _width_lines(table):
+            lines.append(line)
         named = [c for c in table.columns if c.role]
         lines.append(
             f"{len(named)} of {len(table.columns)} column(s) were given a role."
@@ -107,6 +133,9 @@ def markdown(result: Result, version: str) -> str:
         lines.append(
             f"{table.row_count} row(s); header read from {table.header_reason}."
         )
+        for line in _width_lines(table):
+            lines.append("")
+            lines.append(f"**{line}**")
         lines.append("")
         for check in table.checks:
             if not check.findings:
@@ -152,6 +181,9 @@ def as_json(result: Result, version: str) -> str:
                 "header_row": table.header_row_number,
                 "header_reason": table.header_reason,
                 "rows": table.row_count,
+                "header_width": table.header_width,
+                "rows_not_read_wider_than_header": table.rows_wider_than_header,
+                "rows_not_read_narrower_than_header": table.rows_narrower_than_header,
                 "columns": [
                     {
                         "index": column.index,

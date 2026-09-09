@@ -66,6 +66,9 @@ def analyse(
             columns=columns,
             conventions=reasons,
             preamble=table.preamble,
+            header_width=len(table.header),
+            rows_wider_than_header=table.wider_than_header,
+            rows_narrower_than_header=table.narrower_than_header,
         )
         reader = check_module.Reader(
             sheet=table.name,
@@ -75,6 +78,7 @@ def analyse(
             conventions=conventions,
             header_row_number=table.header_row_number,
             reasons=reasons,
+            row_numbers=table.row_numbers,
         )
         for name in check_module.CHECK_NAMES:
             if name in skip:

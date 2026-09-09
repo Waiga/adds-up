@@ -42,6 +42,21 @@ jobs:
           printf 'SKU,Quantity,UOM,Tariff amount payable\n' > "$RUNNER_TEMP/x.csv"
           printf 'W-1,1,each,9.00\nW-1,1000,each,50.00\n' >> "$RUNNER_TEMP/x.csv"
           adds-up "$RUNNER_TEMP/x.csv" && exit 1 || test $? -eq 2
+      # A row of the wrong width must never become a finding. This one has a
+      # real-looking inverted range in it that exists only because an
+      # unquoted comma shifted the row; reading it produced 36.7% of a
+      # check's findings across 200 published files.
+      - run: |
+          printf 'billing_class,description,standard_charge|gross,De-Identified IP Max,De-Identified IP Min\n' > "$RUNNER_TEMP/r.csv"
+          printf 'IP,A widget, with a comma,50.00,80,20\n' >> "$RUNNER_TEMP/r.csv"
+          adds-up "$RUNNER_TEMP/r.csv" > "$RUNNER_TEMP/r.out" 2>&1 || true
+          grep -q "were NOT read" "$RUNNER_TEMP/r.out"
+          ! grep -q "states a De-Identified" "$RUNNER_TEMP/r.out"
+      # A JSON document named .csv must say it is not a table, and exit 2.
+      - run: |
+          printf '{"hospital_name": "A Hospital", "standard_charge_information": []}' > "$RUNNER_TEMP/j.csv"
+          adds-up "$RUNNER_TEMP/j.csv" 2>&1 | grep -q "not a table"
+          adds-up "$RUNNER_TEMP/j.csv" && exit 1 || test $? -eq 2
       # And a file this tool does not read must exit 2, not 1.
       - run: |
           echo "not a spreadsheet" > "$RUNNER_TEMP/x.pdf"
