@@ -200,8 +200,36 @@ benchmark, no index.
   price in most price lists and an interest rate in some.
 - **A qualifier the tool does not know.** If a column that legitimately
   separates two rows has an unrecognised name, `two-prices` and
-  `unit-mismatch` will treat those rows as describing the same thing. This is
-  the most likely source of a wrong finding on a real file.
+  `unit-mismatch` will treat those rows as describing the same thing. This
+  was expected to be the commonest cause of a wrong finding, and on a Czech
+  transit fare list it produced 2,396 of them; on the hospital corpus it
+  caused none of the five found by hand.
+- **A row with more cells than the header.** An unquoted comma inside a
+  free-text field shifts every column after it, and the tool goes on reading
+  whatever now sits under each heading without saying that the row is the
+  wrong width. **This is the largest measured source of wrong findings in
+  this work.** One published standard-charges file carries 180,084 such rows
+  out of 1,342,453; every one of the 1,517 rows in it where the minimum
+  exceeds the maximum is a shifted row, and not one well-formed row has that
+  defect. The same shift makes the tool report a drug "priced in 2 different
+  units: inpatient, outpatient". There is no warning for this and no flag to
+  suppress it. A file with ragged rows should not be trusted to this tool.
+- **A percentage column that holds a fraction.** The CMS schema means 85% by
+  `85`, and some hospitals write `0.85`. Nothing in a column of numbers
+  between 0 and 1 distinguishes 0.85 meaning 85% from 0.85 meaning 0.85%, and
+  a role is never inferred from contents, so the tool takes the column at the
+  schema's word and the arithmetic it prints is out by a factor of a hundred.
+  One published file writes fractions throughout: 11,230 of its 11,240
+  `stated-discount` findings reconcile exactly under the other reading, and
+  are therefore false.
+- **A unit that differs only in case.** `ML` and `mL` are reported as two
+  different units for the same item — and the item itself was matched across a
+  description differing in case in exactly the same way. Every
+  `unit-mismatch` finding in one published file is this and nothing else.
+- **A file that is not a table at all.** A JSON document named `.csv` is read
+  as a single very wide row. No check finds a column it can use, the run exits
+  `2`, and nothing is invented — but the report never says the file is not a
+  table, and the column count in it is meaningless.
 
 ## What the offline promise does and does not cover
 

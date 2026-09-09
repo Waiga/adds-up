@@ -85,6 +85,8 @@ Harder, and the bar is the same as the existing seven:
 ## Reporting a wrong finding
 
 The most valuable issue you can open. Include the two rows, the column headers
-above them, and what the document actually means. A wrong finding is usually a
-qualifier column the vocabulary does not know, and that is a one-line fix with
-a test.
+above them, and what the document actually means. The causes found so far, in
+the order they were measured, are a qualifier column the vocabulary does not
+know, a row carrying more cells than the header, a percentage column holding a
+fraction, and a unit compared case-sensitively. The first is a one-line fix
+with a test; the others are not.
