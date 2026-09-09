@@ -399,10 +399,15 @@ than none. The long version is
 [`docs/limitations.md`](docs/limitations.md).
 
 - **Nothing about margin, ever.** A price list does not state a cost.
-- **Two of the seven checks are unmeasured.** `bundle-above-parts` and
-  `discount-tier` have unit tests and no corpus: nothing found in this work
-  publishes a bundle composition or a volume discount ladder in a
-  machine-readable price list. They may be wrong in ways nobody has seen.
+- **Two of the seven checks, and half of a third, are unmeasured.**
+  `bundle-above-parts` and `discount-tier` have unit tests and no corpus:
+  across 200 hospital files a column naming a bundle's contents appears **zero
+  times**, and so does a quantity column, and nothing else found in this work
+  publishes either in a machine-readable price list. The **currency** half of
+  `unit-mismatch` is in the same position — no currency column appears in
+  either corpus, and the transit fares collected specifically to supply one
+  turned out never to carry two currencies in a feed. All three may be wrong
+  in ways nobody has seen.
 - **A column name it does not know stops a check.** *Trade*, *Band C*,
   *Kundenpreis* get no role. The report says which word it wanted; `--map`
   settles it. The vocabulary is a record of headers that exist, and it is
