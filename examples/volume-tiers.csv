@@ -1,0 +1,10 @@
+Widget price list — effective 1 October
+All prices exclude tax.
+
+SKU,Description,Quantity,Unit price,Currency
+W-100,Standard widget,1,12.50,GBP
+W-100,Standard widget,50,11.20,GBP
+W-100,Standard widget,250,11.80,GBP
+W-100,Standard widget,1000,9.40,GBP
+W-200,Reinforced widget,1,19.00,GBP
+W-200,Reinforced widget,100,17.25,GBP

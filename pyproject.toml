@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "adds-up"
+dynamic = ["version"]
+description = "Reads a price list and reports the arithmetic in it that contradicts itself."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Waiga Arya" }]
+keywords = ["pricing", "price list", "csv", "xlsx", "spreadsheet", "audit", "cli"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Manufacturing",
+  "Intended Audience :: Financial and Insurance Industry",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Office/Business :: Financial",
+]
+# Nothing. The offline test only has this package's source to read, and that
+# is only good enough because there is nothing else in the install to read.
+# An .xlsx is a zip of XML, so `zipfile` and `xml.etree` do the job that would
+# otherwise have cost a dependency.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/Waiga/adds-up"
+Issues = "https://github.com/Waiga/adds-up/issues"
+
+[project.scripts]
+adds-up = "adds_up.cli:main"
+
+[tool.setuptools]
+packages = ["adds_up"]
+
+# One source of truth for the version, readable without installing.
+[tool.setuptools.dynamic]
+version = { attr = "adds_up.__version__" }
