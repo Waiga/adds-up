@@ -363,7 +363,18 @@ The reason the corpus fails is structural, and it is worth recording:
 
 | | |
 |---|---|
-<!--GTFSPROBE-->
+| feeds tried, at seed 11, until 140 held a fare table | 345 |
+| — unreachable | 65 |
+| **feeds with a `fare_attributes.txt`** | **140** |
+| fare rows in them | 1,174,347 |
+| distinct currencies across those feeds | 12 |
+| feeds with a repeated `fare_id` | **0** |
+| feeds carrying more than one currency | **0** |
+| feeds using the GTFS-Fares v2 `fare_products.txt` | 8 |
+
+Twelve currencies appear across the sample — USD, EUR, CAD, JPY, BRL, PEN,
+INR, CDF, MDL, RWF, RON, RSD — and **never two of them in one feed**, which is
+the whole of the problem.
 
 `fare_id` is a primary key in the GTFS specification, so the same fare can
 never appear twice, and a feed is published by one agency in one currency. The

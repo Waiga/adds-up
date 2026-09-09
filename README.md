@@ -310,6 +310,21 @@ re-run.
   one item priced twice.** Holding only the first item column equal produced
   **75,968 findings across 22 files**. Every column naming what is priced is
   now part of the identity, and `code|1`, `code|2` are recognised as such.
+- **A free-text note was not treated as telling two rows apart.** Hand-reading
+  thirty `two-prices` findings found **ten** that were two rows identical but
+  for a note reading `Gross Charge Type: Sta` against `Gross Charge Type:
+  Fee` — a 33% false-positive rate, from one unrecognised column. Recognising
+  notes as qualifiers took the count on the same files from **91,760 to
+  5,221**, and a re-audit of the survivors found 22 of 22 correct.
+- **`drug_unit_of_measurement` holds an amount and `drug_type_of_measurement`
+  holds the unit.** The names read the other way round, and reading them that
+  way had the tool reporting that a drug was "priced in 2 different units:
+  1357.2 and 8".
+- **A percentage was compared against a cash price.** Where a file leaves its
+  negotiated dollar column empty throughout, the nearest remaining price was
+  the discounted cash price — and a gross charge times a negotiated percentage
+  has no reason to equal one. A percentage now pairs only with a column that
+  is its own name with the last word changed, or declines to run.
 - **`unit-mismatch` reported every multi-currency price list.** It ignored the
   qualifier columns — region, plan, payer — that legitimately separate the
   rows. A price list quoting one product in GBP for the UK and EUR for the EU
