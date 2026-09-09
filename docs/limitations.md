@@ -83,6 +83,18 @@ The cost is silent misses. A column called *Trade*, *Band C*, *Kundenpreis* or
 report says which word it was looking for; `--map` settles it; `--list-columns`
 prints everything the tool knows.
 
+**A free-text note counts as telling two rows apart.** A note attached to a
+row is, by definition, something about that row the other columns do not say,
+so `two-prices` and `unit-mismatch` treat two rows carrying different notes as
+two rows the document is separating. That rule came out of a hand audit in
+which ten of thirty findings were pairs of rows identical but for a note
+reading `Gross Charge Type: Sta` against `Gross Charge Type: Fee`.
+
+**It has a cost, and the cost falls the other way.** A genuine duplicate whose
+notes differ trivially — a difference of capitalisation, a stray space — is
+now silent. That is the right direction for a tool whose findings are
+accusations, but it is a real loss of sensitivity and not a free win.
+
 **The vocabulary was extended after meeting real files.** Names such as
 `standard_charge|gross`, `negotiated_dollar`, `drug_unit_of_measurement`,
 `payer_name` and `modifiers` are in it because published files use them, not
