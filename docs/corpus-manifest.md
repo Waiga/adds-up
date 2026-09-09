@@ -104,6 +104,30 @@ and just as importantly, **column recognition against headers this project did
 not write**, several hundred of them, from files authored independently by
 different hospitals and different vendors.
 
+**Collected.** 9 September 2026.
+
+**No single checksum, and why.** There is no one file to hash: the corpus is
+200 documents fetched from 200 hospital websites.
+
+[`docs/hospital-corpus.csv`](hospital-corpus.csv) is the citation list, and it
+is the one thing from this corpus that *is* committed here. 200 rows, 48 kB:
+the CMS certification number, the state, the facility name, the exact URL, the
+size of the CSV as analysed, the size as downloaded, and the **SHA-256 of each
+CSV**. Those 200 hashes are the checksum for this corpus. 199 of the numbers
+are distinct — one appears twice, for two locations of one certified provider.
+
+**It is a bibliography, and deliberately nothing more.** It carries no price,
+no charge, no row of any hospital's file, and no personal data of any kind:
+every field in it is a public federal identifier, a facility name, or a URL
+that 45 CFR 180.50 requires to be published and downloadable. The files
+themselves are not redistributed here. That is the same choice made for the
+tariff corpus and for the transit feeds — cite the source, publish the
+measurement, leave the documents where their publishers put them.
+
+You very likely do not have the same files: hospitals republish these
+continuously, and a hash that no longer matches means the document has moved
+on, not that anything is wrong.
+
 **Why these files exist.** 45 CFR 180.50 requires every hospital in the United
 States to publish a machine-readable file of its standard charges, "free of
 charge", "without having to establish a user account or password", and
@@ -293,12 +317,40 @@ qualifier as the most likely cause of a wrong finding on your file.
 
 ### A corpus that was collected and then rejected
 
-**GTFS fare tables**, from the Mobility Database catalogue
-(`https://bit.ly/catalogs-csv`, 1,977 static feeds in 87 countries with stable
-mirrored download URLs). Published transit fares are real price data, they are
-free and machine-readable, and they span many currencies, which looked like
-the one available source that could exercise `unit-mismatch` on currency
-rather than on units.
+**GTFS fare tables**, from the Mobility Database catalogue. Published transit
+fares are real price data, free and machine-readable, spread across many
+currencies — which made this look like the one available source that could
+exercise `unit-mismatch` on a currency rather than on a unit.
+
+**Source.**
+
+```
+https://bit.ly/catalogs-csv
+    -> https://storage.googleapis.com/storage/v1/b/mdb-csv/o/sources.csv?alt=media
+```
+
+The short link is what the Mobility Database publishes; the target above is
+where it redirects, and is what a script actually fetches.
+
+**Retrieved.** 9 September 2026. The catalogue served
+`Last-Modified: Mon, 31 Aug 2026 17:54:03 GMT`.
+
+**No checksum is published here, deliberately.** The catalogue carries an
+`ETag` but no stable hash, each feed is re-published by its own agency on its
+own schedule, and `urls.latest` points at a mirror that is refreshed
+continuously. Any hash taken today would fail tomorrow and prove nothing. What
+is stable is the *structural* fact this corpus was rejected for, which does
+not depend on which day the feeds were fetched.
+
+**Counts, from the catalogue as retrieved.** 1,977 GTFS static feeds, not
+counting redirected entries, across 87 countries.
+
+**Licence.** Mixed, and mostly absent: of the 1,977 feeds, **1,183 state no
+licence at all** in the catalogue. The rest point at their own agency's terms
+— Spain's national access point (111), Trafiklab (57), the UK Open Government
+Licence (38), BC Transit (31), Estonia's ministry (23) and a long tail. No
+feed is redistributed here and none was kept; the probe reads each one in
+memory and discards it.
 
 `tools/probe_gtfs.py` is the script that established this and prints every
 figure below:
@@ -311,10 +363,7 @@ The reason the corpus fails is structural, and it is worth recording:
 
 | | |
 |---|---|
-| feeds with a `fare_attributes.txt` | 139 |
-| fare rows in them | 1,174,346 |
-| feeds with a repeated `fare_id` | **0** |
-| feeds carrying more than one currency | **0** |
+<!--GTFSPROBE-->
 
 `fare_id` is a primary key in the GTFS specification, so the same fare can
 never appear twice, and a feed is published by one agency in one currency. The
