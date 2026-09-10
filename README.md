@@ -321,7 +321,7 @@ produced.
 | CMS template versions, all in circulation at once | 3.0.0 ×71, 2.0.0 ×66, 2.2.0 ×23, 2.0.2 ×1 |
 | Header row chosen | row 3 in 169 files, row 1 in 3, row 4 in 1 |
 | Slowest file | 685 MB in 140 s. The largest, 1,083 MB, took 44 s |
-| Whole run | 21.4 minutes of analysis, peak RSS 8.93 GB |
+| Whole run | 21.4 minutes of analysis, peak RSS about 8.9 GB |
 
 **27 of the 200 files are not CSV**, and the tool now says so. They are the
 CMS schema's JSON form, served from a URL ending `.csv`. Read as delimited
@@ -735,9 +735,16 @@ than none. The long version is
   corpus — 1,083 MB of CSV, 93,954 rows of 285 columns — needs about **3.9 GB
   and 44 seconds** on its own, on the machine these numbers were taken on
   (macOS, CPython 3.14). That is roughly four times the file size. Across the
-  whole 200-file run, peak resident memory reached **8.97 GB**, and **6.9 to
-  8.5 GB** on the three earlier runs. There is no streaming mode and no cap: a
-  file bigger than your memory will not be read, it will swap.
+  whole 200-file run, peak resident memory reached about **8.9 GB**, and **6.9
+  to 8.5 GB** on the three earlier runs. There is no streaming mode and no cap:
+  a file bigger than your memory will not be read, it will swap.
+
+  That figure is given to one decimal on purpose. Two records of this same run
+  disagreed in the second decimal, 8.93 GB against 8.97 GB, and the raw value
+  was not kept: `tools/measure_hospital.py` computes `peak_rss_mb` and prints it
+  with the rest of the run's JSON, and that output was read once and never
+  committed. One decimal is the precision the surviving records agree on.
+  Anything finer than that would be a transcription, not a measurement.
 - **One file at a time.** It cannot compare this quarter's price list with
   last quarter's, or with the contract, or with the invoice.
 - **It reads values, not formulas.** A number produced by a broken formula is
