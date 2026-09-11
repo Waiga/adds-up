@@ -78,10 +78,11 @@ priced higher, in those words, and stops.
 ## Install
 
 ```bash
-pip install .
+pip install adds-up
 ```
 
-Python 3.11 or newer. Nothing else.
+Python 3.11 or newer. Nothing else. To install from a clone instead, `pip install .`
+from the repository root.
 
 ## Use
 
