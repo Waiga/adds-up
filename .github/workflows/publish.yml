@@ -26,10 +26,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Verify the tagged commit is on main
+      - name: Verify the tag is the current main commit
         run: |
           tagged_commit="$(git rev-parse "${GITHUB_SHA}^{commit}")"
-          git merge-base --is-ancestor "$tagged_commit" refs/remotes/origin/main
+          main_commit="$(git rev-parse refs/remotes/origin/main^{commit})"
+          test "$tagged_commit" = "$main_commit"
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
