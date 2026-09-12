@@ -7,7 +7,7 @@ call, no dependencies beyond Python itself.
 
 ```
 $ adds-up examples/volume-tiers.csv
-adds-up 0.1.0 — examples/volume-tiers.csv
+adds-up 0.1.1 — examples/volume-tiers.csv
 
 6 row(s) under a header read from row 4, the only header-shaped row above the data with data under it; 3 row(s) above it were read as a title block.
 5 of 5 column(s) were given a role.
