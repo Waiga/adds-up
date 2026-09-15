@@ -7,7 +7,7 @@ call, no dependencies beyond Python itself.
 
 ```
 $ adds-up examples/volume-tiers.csv
-adds-up 0.1.1 — examples/volume-tiers.csv
+adds-up 0.1.2 — examples/volume-tiers.csv
 
 6 row(s) under a header read from row 4, the only header-shaped row above the data with data under it; 3 row(s) above it were read as a title block.
 5 of 5 column(s) were given a role.
@@ -47,8 +47,8 @@ COLUMNS
 **A price list does not state a cost.**
 
 That one sentence decides everything this tool is. Almost every question a
-person wants to ask about a price list — is this profitable, is it
-competitive, is the discount too generous, should tier 3 be cheaper — needs at
+person wants to ask about a price list (is this profitable, is it
+competitive, is the discount too generous, should tier 3 be cheaper) needs at
 least one number the document does not contain.
 
 So this tool answers none of them, and it is built so that it cannot look as
@@ -61,15 +61,15 @@ at once. *"Tier 3 costs more per unit than tier 2"* is a finding. *"Your
 pricing is wrong"* is not, and never will be.
 
 The reasoning, and every check that was considered and rejected, is in
-[`docs/superpowers/specs/2026-09-09-adds-up-design.md`](docs/superpowers/specs/2026-09-09-adds-up-design.md).
+[`docs/superpowers/specs/2026-09-09-adds-up-design.md`](https://github.com/Waiga/adds-up/blob/main/docs/superpowers/specs/2026-09-09-adds-up-design.md).
 
 ## The second thing: a finding is not a defect
 
 The tool reports that two numbers in a document cannot both describe one
 consistent price. It does not know which is wrong, or whether either is.
 
-The corpus proved this the hard way. **Inclining block pricing — charging more
-per unit as you use more — is deliberate and everywhere in utility tariffs.**
+The corpus proved this the hard way. **Inclining block pricing, charging more
+per unit as you use more, is deliberate and everywhere in utility tariffs.**
 Of thirty volume-tier findings read by hand against 29,521 published tariffs,
 all thirty were arithmetically correct and **twenty-nine were not mistakes**:
 they were pricing somebody meant to set. The check says a larger band is
@@ -101,7 +101,7 @@ adds-up --list-columns                     # every column name it recognises
 Exit codes: `0` nothing found, `1` at least one finding, `2` could not run.
 
 **Exit 0 requires that two numbers were actually compared.** A file that did
-not parse exits `2`, and so does a run in which nothing was compared — every
+not parse exits `2`, and so does a run in which nothing was compared: every
 check switched off, no check able to find its columns, or the columns it found
 empty. The report prints the comparison count, so "3 checks ran" and "3 checks
 ran and compared nothing" are never the same line.
@@ -109,8 +109,8 @@ ran and compared nothing" are never the same line.
 That gate is on comparisons rather than on whether a check reported that it
 ran, and the difference is not theoretical: an adversarial review found a
 price list with a real inverted tier in it exiting `0` because its price
-column had a heading the vocabulary did not know, and `unit-mismatch` — which
-needs no numbers at all — had run and found the units consistent. A green
+column had a heading the vocabulary did not know, and `unit-mismatch`, which
+needs no numbers at all, had run and found the units consistent. A green
 result over a price list nothing was compared in is the one outcome this tool
 exists not to produce.
 
@@ -130,8 +130,8 @@ and which did not, with a reason.
 | **unit-mismatch** | One item is priced in two different units, or two different currencies. A document that spans several currencies is normal and is not reported. |
 
 **Every one of these compares two things printed in the input**, and six of
-the seven compare numbers. `unit-mismatch` compares text — a unit code against
-a unit code — and the report says so beside it, because exit 0 is earned by
+the seven compare numbers. `unit-mismatch` compares text (a unit code against
+a unit code) and the report says so beside it, because exit 0 is earned by
 arithmetic and that check does none.
 
 None of them uses a cost, a margin, a benchmark, a market rate or a currency
@@ -141,15 +141,15 @@ conversion, because a price list states none of those.
 
 **A percentage has two opposite meanings, and only its name decides which.**
 *20% off* and *pays 20% of* are contradictory instructions and both appear in
-real price lists — the second is how the US hospital price-transparency schema
+real price lists: the second is how the US hospital price-transparency schema
 states a negotiated rate. So there are two roles, and the column's name picks
 one. Trying both readings and reporting only when neither fits was rejected:
 a check that accepts whichever reading happens to fit can never fail.
 
 **A percentage is only compared with the price it is a percentage of.** Where
 a document holds several net-price columns, the percentage pairs only with the
-one that is its own name with the last word changed — `…|negotiated_percentage`
-with `…|negotiated_dollar` — unless there is exactly one candidate. A published
+one that is its own name with the last word changed (`…|negotiated_percentage`
+with `…|negotiated_dollar`), unless there is exactly one candidate. A published
 file puts a discounted cash price beside that pair, and a gross charge times a
 negotiated percentage has no reason to equal a cash price; on files that leave
 the negotiated dollar column empty throughout, falling back to the nearest
@@ -158,9 +158,9 @@ declines to run and says so.
 
 **An undecidable number is refused, not guessed.** `1,234` is 1234 in one
 convention and 1.234 in the other. The convention is decided once per column
-from the cells that are unambiguous, and a column with none is refused — the
+from the cells that are unambiguous, and a column with none is refused: the
 checks that needed it do not run, and the report says so. On the tariff corpus
-that costs 316 of 29,521 documents — rate sheets in which the only cells
+that costs 316 of 29,521 documents: rate sheets in which the only cells
 carrying a separator are of that undecidable shape, so nothing in the column
 settles it.
 
@@ -168,7 +168,7 @@ settles it.
 
 A price list has no schema, so the tool reads the word at the top of each
 column and looks it up. **Roles come from names, never from the shape of the
-contents** — a column of numbers between 0 and 100 is equally likely to be a
+contents**. A column of numbers between 0 and 100 is equally likely to be a
 discount, a case pack, a quantity break or a stock figure, and picking one on
 that evidence is how a tool invents a contradiction.
 
@@ -180,7 +180,7 @@ was looking for. `--map` settles anything it got wrong.
 One ambiguity cannot be settled by the name at all: a column called `max` is
 the top of a volume band in a tier table and the top of a price range in a
 rate sheet. The rule is that a bound is a range end only when a column naming
-the other end is present, and a quantity otherwise — and the report prints
+the other end is present, and a quantity otherwise, and the report prints
 which reading it took.
 
 **Where several columns claim one role, the leftmost whose numbers can be read
@@ -190,7 +190,7 @@ first empty on every row; taking the leftmost regardless had the check
 reporting that it could not run with a usable column beside the one it had
 chosen.
 
-**The header row is chosen the same way — by names.** Among the header-shaped
+**The header row is chosen the same way: by names.** Among the header-shaped
 rows in the first 25 that have data under them, the one naming the most
 columns this tool recognises wins, and the last one only breaks a tie. That
 handles a title block above the header, which is what published files usually
@@ -207,7 +207,7 @@ to tell them apart. The tool says it does not read PDFs rather than reading
 them badly.
 
 The `.xlsx` reader is `zipfile` and `xml.etree` and nothing else, including
-the number formats — because a cell storing `42.50425` and displaying `42.50`
+the number formats, because a cell storing `42.50425` and displaying `42.50`
 must set the tolerance from what it *displays*, or the discount check is wrong
 on every formatted workbook.
 
@@ -215,7 +215,7 @@ on every formatted workbook.
 
 Both read spreadsheets; they ask opposite questions.
 [`show-your-work`](https://github.com/Waiga/show-your-work) asks **how the
-workbook was built** — a formula someone typed over, a `SUM` that stops a row
+workbook was built**: a formula someone typed over, a `SUM` that stops a row
 short, a hidden sheet, a stale link. It needs formulas.
 
 `adds-up` never looks at a formula. It reads values as printed and asks
@@ -229,13 +229,13 @@ consistently. Run both.
 Unit tests pass on the inputs their author imagined, which proves very little.
 This was run over two corpora of real published documents, neither written by
 this project. Full provenance, hashes and selection rules:
-[`docs/corpus-manifest.md`](docs/corpus-manifest.md).
+[`docs/corpus-manifest.md`](https://github.com/Waiga/adds-up/blob/main/docs/corpus-manifest.md).
 
 `tools/measure_corpus.py`, `tools/measure_hospital.py`, `tools/probe_gtfs.py`
 and `tools/audit_hospital.py` are the scripts that produced every number
 below.
 
-### Corpus 1 — 29,521 published utility tariffs
+### Corpus 1: 29,521 published utility tariffs
 
 The OpenEI U.S. Utility Rate Database, retrieved 9 September 2026, SHA-256
 `9005c535…d28d5`. Every rate structure with two or more tiers, from 18,049
@@ -245,20 +245,20 @@ distinct tariffs published by 2,062 utilities.
 |---|---|
 | Price lists | 29,521 |
 | Tier rows in them | 75,969 |
-| — carrying a per-unit adjuster, added to the rate before comparing | 32,996 |
+| of which carry a per-unit adjuster, added to the rate before comparing | 32,996 |
 | Crashes | **0** |
 | `volume-tier` ran on | 29,205 |
-| — did not run, rate column undecidable | 316 |
+| `volume-tier` did not run, rate column undecidable | 316 |
 | **`volume-tier` findings** | **15,487 on 12,050 documents** |
-| — where the smaller band is priced at zero | 4,404 |
+| of which the smaller band is priced at zero | 4,404 |
 
 **Accuracy: 30 of 30 correct.** Thirty findings drawn at seed 11, one per
 tariff, each read against that tariff's own printed tier table. Every one
 quotes the two rates the file prints, in the right order. None was wrong.
 
 **A stronger check than the sample.** The measurement script classifies each
-tier ladder's direction independently of the tool — rising, falling, mixed or
-flat — straight from the raw export. The two agree almost exactly:
+tier ladder's direction independently of the tool (rising, falling, mixed or
+flat) straight from the raw export. The two agree almost exactly:
 
 | ladder shape | tariffs | documents with a finding |
 |---|---|---|
@@ -268,13 +268,13 @@ flat — straight from the raw export. The two agree almost exactly:
 | mixed (falls, then rises) | 1,341 | 1,341 |
 
 The 316 documents whose rate column was refused break down as 313 falling, 2
-rising and 1 flat — which accounts for the two rising ladders with no finding
+rising and 1 flat, which accounts for the two rising ladders with no finding
 exactly. **Nothing falling or flat was reported anywhere in the corpus.**
 
 **And 29 of the 30 are also not mistakes.** This is the number that matters
 and it is not a flattering one:
 
-- **11 of 30 have a first band priced at zero** — an allowance included in a
+- **11 of 30 have a first band priced at zero**: an allowance included in a
   fixed charge, or the threshold above which a demand charge starts. That is
   not an inverted tier in any useful sense. The tool prints a note on these;
   across the whole corpus they are 4,404 of the 15,487 findings, **28%**.
@@ -293,7 +293,7 @@ and establishes nothing whatever about how often an inverted tier is a
 mistake.** A utility tariff is the wrong document to ask that of. Said here
 rather than left for a reader to assume the reverse.
 
-### Corpus 2 — US hospital standard-charges files
+### Corpus 2: US hospital standard-charges files
 
 Files every US hospital is required to publish under 45 CFR 180.50, in the CMS
 template's CSV shape, collected 9 September 2026. This corpus exists because
@@ -310,8 +310,8 @@ produced.
 | | |
 |---|---|
 | Files | 200 |
-| — CSV | 173 |
-| — JSON served from a `.csv` URL, refused by name | 27 |
+| of which CSV | 173 |
+| of which JSON served from a `.csv` URL, refused by name | 27 |
 | Bytes read | 9.28 GB |
 | Rows read | 20,513,338 |
 | Rows **not** read, cell count not the header line's | **190,549**, in 19 files |
@@ -329,7 +329,7 @@ CMS schema's JSON form, served from a URL ending `.csv`. Read as delimited
 text, one of them is a single row of up to 1.16 million comma-separated
 fields; every check then fails to find a column it can use and the run exits
 `2`. That was already the right outcome and nothing was ever invented out of
-one — but the reader had to infer *this is not a table* from a header a
+one, but the reader had to infer *this is not a table* from a header a
 million columns wide. A file whose first non-blank character is `{` or `[`
 with a JSON key after it is now refused by name, with a message saying so.
 It is a shape test and not a parse, so a price list that opened that way and
@@ -356,8 +356,8 @@ Joseph of Nashua (7,043 of 45,242) and Mercy Waldron (2,352 of 478,748).
 
 The rule is judged against the header **line**, not against the headings that
 have names, and both halves of that were paid for. One file ends its header
-line in a comma — 25 headings of which the last is empty, above 1,444,617
-rows of 24 cells — so a row that stops short of an unnamed column is fine.
+line in a comma (25 headings of which the last is empty, above 1,444,617
+rows of 24 cells), so a row that stops short of an unnamed column is fine.
 Another ends its header line in three commas and puts a value in the last of
 the columns those commas open, so those unnamed columns cannot simply be
 dropped. A first version of this rule did drop them and emptied that file of
@@ -367,9 +367,9 @@ all 27,356 rows.
 
 | check | ran on | why not, where it did not |
 |---|---|---|
-| **volume-tier** | **0 files** | no column names a quantity or a volume band — in all 173 |
+| **volume-tier** | **0 files** | no column names a quantity or a volume band, in all 173 |
 | **discount-tier** | **0 files** | the same column is missing |
-| **bundle-above-parts** | **0 files** | no column names the items a bundle is made of — in all 173 |
+| **bundle-above-parts** | **0 files** | no column names the items a bundle is made of, in all 173 |
 | stated-discount | 70 | in the 103 it did not: 77 hold a percentage column with no number in it, 21 hold a percentage that pairs with none of their net-price columns, 3 hold one whose writing the document does not settle, 2 name no list price |
 | two-prices | 171 | 2 name no item |
 | inverted-range | 160 | 11 refuse the number convention in the column, 2 name no bottom of a range |
@@ -385,8 +385,8 @@ so there is nothing to contradict.
 
 `stated-discount` ran on 70 files rather than the first run's 75. Three of
 the five it lost hold nothing but percentage columns every value of which
-lies between 0 and 1 — which is 85% in one writing and 0.85% in the other,
-with nothing in the document to settle it — so every one of them is refused
+lies between 0 and 1 (which is 85% in one writing and 0.85% in the other,
+with nothing in the document to settle it), so every one of them is refused
 and the check declines to run. **22 percentage columns in 4 files** are
 refused for that reason, out of the **1,623 columns the run gave a percentage
 role**; the fourth file has other percentage columns that are readable, and
@@ -404,7 +404,7 @@ the check still runs on it.
 **Every one of those totals is more concentrated than it was**, because what
 the fixes removed was concentrated: one file's ragged rows, one file's
 fractions. `inverted-range` is now four documents and its top three are all of
-it. 470,549 is still three hospitals — Nazareth 342,918, Hancock County
+it. 470,549 is still three hospitals: Nazareth 342,918, Hancock County
 85,797, Vibra Central Dakota 29,485, **97.4%** between them, against a median
 document of 240. The number is real and it is not a rate: it says three files
 are enormous and repetitive. Every count above is published beside its worst
@@ -412,8 +412,8 @@ document for that reason, and `--per-document` writes the full list.
 
 `two-prices` is unchanged at 189,501 and is the least concentrated of the
 four, and there the concentration is not really about documents. Four of its
-five largest — Sycamore Shoals, Hancock County, Russell County and Lonesome
-Pine, 117,960 findings between them — share a column layout, a notes wording
+five largest (Sycamore Shoals, Hancock County, Russell County and Lonesome
+Pine, 117,960 findings between them) share a column layout, a notes wording
 and the *same duplicated rows*: `BLADE RESECTOR 3.5`, CDM code 27200002,
 appears in all four. That is one vendor's export published by four hospitals,
 not four independent measurements of anything.
@@ -422,8 +422,8 @@ not four independent measurements of anything.
 
 Every drawn finding was read back against the file it came from, at the row
 and column it names, in both runs. `tools/audit_hospital.py` does the
-mechanical half: it re-reads the CSV independently, and — added because of
-what the first audit found — it now also confirms the cited row is the header
+mechanical half: it re-reads the CSV independently, and (added because of
+what the first audit found) it now also confirms the cited row is the header
 line's width and re-derives the arithmetic the finding printed, saying which
 reading of a percentage column reconciles.
 
@@ -433,19 +433,19 @@ all. That sounds comprehensive and is not: those are 4, 12 and 16 documents.
 
 | check | read by hand | drawn from | wrong, this run | wrong, first run |
 |---|---|---|---|---|
-| stated-discount | 16 | **all 16** documents with a finding | **0** | 2 of 17 — **12%** |
-| two-prices | 30 + 4 | 30 of 52 documents, plus 2 findings from each of the 2 largest the draw missed — **95.8%** of the check's findings | **0** | 0 of 40 |
+| stated-discount | 16 | **all 16** documents with a finding | **0** | 2 of 17, **12%** |
+| two-prices | 30 + 4 | 30 of 52 documents, plus 2 findings from each of the 2 largest the draw missed: **95.8%** of the check's findings | **0** | 0 of 40 |
 | inverted-range | 4 | **all 4** documents with a finding | **0** | 1 of 5 |
-| unit-mismatch | 12 | **all 12** documents with a finding | **0** | 2 of 14 — **14%** |
+| unit-mismatch | 12 | **all 12** documents with a finding | **0** | 2 of 14, **14%** |
 
 Weighted by findings rather than by documents, counting only causes that were
 established across a whole file rather than sampled:
 
 | check | first run | this run | what changed |
 |---|---|---|---|
-| inverted-range | 1,517 of 4,131 — **36.7%** | **0 of 2,614** | Sky Lakes' 1,517 were all shifted rows; the count fell by exactly 1,517 |
-| unit-mismatch | 369 of 2,088 — **17.7%** | **0 of 1,719** | 352 shifted rows and 17 case-only; the count fell by exactly 369 |
-| stated-discount | 11,230 of 572,977 — **2.0%** | **0 of 470,549** | Collingsworth's 11,240 fractions are gone entirely |
+| inverted-range | 1,517 of 4,131, **36.7%** | **0 of 2,614** | Sky Lakes' 1,517 were all shifted rows; the count fell by exactly 1,517 |
+| unit-mismatch | 369 of 2,088, **17.7%** | **0 of 1,719** | 352 shifted rows and 17 case-only; the count fell by exactly 369 |
+| stated-discount | 11,230 of 572,977, **2.0%** | **0 of 470,549** | Collingsworth's 11,240 fractions are gone entirely |
 | two-prices | 0 of 189,501 | **0 of 189,501** | untouched by all three fixes |
 
 The two arithmetic identities are the strongest evidence here: the corpus-wide
@@ -455,8 +455,8 @@ false, and by nothing else.
 **Read the zeroes as what they are.** They mean no finding in the samples
 above was wrong, and that the three causes measured file-wide are gone by
 construction. They are not a claim that the rate is zero. `inverted-range`
-now rests on **four documents**; `unit-mismatch` on twelve. A fourth cause —
-a qualifier column the vocabulary does not know — remains unfixed, and has
+now rests on **four documents**; `unit-mismatch` on twelve. A fourth cause,
+a qualifier column the vocabulary does not know, remains unfixed, and has
 not been seen in either audit of this corpus.
 
 What the drawn findings did contain, six times, was a pair of rows differing
@@ -470,7 +470,7 @@ allowed to stand.
 **One fix removed findings the audit had judged correct.** Vibra Central
 Dakota fell from 120,673 `stated-discount` findings to 29,485. The 91,188 it
 lost came from percentage columns holding `0.8` throughout, which are now
-refused — and the first audit had judged Vibra's sampled finding *correct*,
+refused, and the first audit had judged Vibra's sampled finding *correct*,
 because that file's `negotiated_dollar` column holds the gross charge on
 120,698 of its 120,728 rows, so the rows do contradict themselves whichever
 way the percentage is read. Refusing the column stops the tool saying so. That
@@ -487,17 +487,17 @@ they quote, and most of them are still not mistakes:
   negotiated dollar of `1.25`; `100.00% of 1.0000` beside `1.01`;
   `64% of 0.765 = 0.4896` beside `0.48`. Three files state in their own
   `standard_charge|negotiated_algorithm` column, in words, that the negotiated
-  dollar is a percentage of the gross charge *and then uplifted* — Hancock
+  dollar is a percentage of the gross charge *and then uplifted*: Hancock
   County's cluster on 1.05, 1.06 and 1.02, which is what that column says. The
   tool does not read it, and would be guessing if it tried.
 - That pattern is most of the corpus total. Read back with a flat 0.5%
   tolerance, 229,392 of Nazareth's 879,195 percentage/dollar/gross triples
   fail, and **99.99% of those have a dollar between 0.97 and 1.02 times the
-  percentage of the gross charge** — not a contradiction anybody would act on.
+  percentage of the gross charge**, not a contradiction anybody would act on.
 - The rest are gaps nothing in the document explains, and some are plainly
   defects: a percentage column filled with `100` beside a dollar that is not
   the gross charge, a negotiated dollar of `52.9` printed identically into the
-  percentage column beside it, and — at Nazareth — 64% of $91.00 stated as
+  percentage column beside it, and (at Nazareth) 64% of $91.00 stated as
   $58.42 where it is $58.24, which is two digits transposed.
 
 ### What this corpus cannot establish
@@ -511,17 +511,17 @@ the file describes in prose, and only sometimes an error.
 **It cannot measure three of the seven checks, and it has now established
 why.** `volume-tier`, `discount-tier` and `bundle-above-parts` need a
 quantity, a volume band or a composition, and no file in this corpus publishes
-any of them — so `volume-tier` rests entirely on the tariff corpus and the
+any of them, so `volume-tier` rests entirely on the tariff corpus and the
 other two rest on nothing but their unit tests. The currency half of
 `unit-mismatch` is in the same position: no currency column appears in either
 corpus.
 
 **A zero false-positive rate is a statement about a sample.** Where a rate
 here comes from a draw it says how many were read, and three of the four
-draws are every document that produced the finding at all — which sounds
+draws are every document that produced the finding at all, which sounds
 comprehensive and is not, because those are 4, 12 and 16 documents. The
-per-file arithmetic — Sky Lakes' 180,084 ragged rows, Collingsworth's 11,240
-fractions, Vibra's 91,188 suppressed findings, Kula's 17 case-only units —
+per-file arithmetic (Sky Lakes' 180,084 ragged rows, Collingsworth's 11,240
+fractions, Vibra's 91,188 suppressed findings, Kula's 17 case-only units)
 are counts over named files, not estimates over the corpus.
 
 **It is biased towards small hospitals**, by the 40 MB download cap described
@@ -541,13 +541,13 @@ files. The suite was green throughout.
 **The counts in this section are not reproducible.** They were taken against
 the corpora named above with *earlier* versions of this tool, and the current
 `tools/` scripts cannot produce them, because the defects they measure are
-fixed. They are a changelog with evidence attached, not a measurement — which
+fixed. They are a changelog with evidence attached, not a measurement, which
 is exactly the distinction this repository otherwise insists on, so it is
 stated rather than left for a reader to discover that the numbers do not
 re-run.
 
 **Three of them were found by hand-reading the first hospital run's findings
-back against their files** — 66 findings, one per document for each check.
+back against their files**: 66 findings, one per document for each check.
 The suite was green, both corpora had been measured, and an adversarial review
 had already been through the tool. They are listed first because they are the
 largest of everything on this page, and because the same thing has now
@@ -561,7 +561,7 @@ what tests do not.
   heading. One published file, Sky Lakes Medical Center, carries **180,084
   such rows out of 1,342,453**; every one of the 1,517 rows in it where the
   minimum exceeded the maximum was one of them, and not one well-formed row in
-  the file had that defect — **36.7% of the whole corpus's `inverted-range`
+  the file had that defect: **36.7% of the whole corpus's `inverted-range`
   findings**. The same shift supplied all 352 of that file's `unit-mismatch`
   findings, reporting drugs "priced in 2 different units: inpatient,
   outpatient". A row of the wrong width is now not read, and the report says
@@ -569,7 +569,7 @@ what tests do not.
   exactly 1,517 and 352.
 - **A unit was compared case-sensitively, and the item beside it was not.**
   `ML` on one row and `mL` on another were reported as one drug priced in two
-  units — after the two rows had been matched as one item across a description
+  units, after the two rows had been matched as one item across a description
   differing in case in exactly the same way. All 17 findings in one published
   file, Kula Hospital, were that and nothing else. The unit is now folded like
   the item, and the corpus-wide count fell by exactly 17.
@@ -577,7 +577,7 @@ what tests do not.
   schema means 85% by `85`; some hospitals write `0.85`. One file,
   Collingsworth General, writes fractions throughout, and **11,230 of its
   11,240 `stated-discount` findings reconciled exactly under the other
-  reading**. The fix is not to detect which writing a file uses — that would
+  reading**. The fix is not to detect which writing a file uses. That would
   be inferring from contents, which this tool does not do. It is to ask the
   question the number reader already asks of a thousands separator: *does
   anything in the column settle it?* A cell printing `%` does, and so does a
@@ -588,7 +588,7 @@ what tests do not.
 - **A JSON document named `.csv` was read as a very wide table.** 27 of the
   200 hospital files are the CMS schema's JSON form served from a URL ending
   `.csv`. No check could find a column it could use and the run exited `2`,
-  which was right — but nothing said the file was not a table, and the column
+  which was right, but nothing said the file was not a table, and the column
   totals for the whole corpus were 99.8% JSON punctuation. It is refused by
   name now.
 
@@ -611,7 +611,7 @@ Everything below was found by the earlier runs, in the same way.
 - **A free-text note was not treated as telling two rows apart.** Hand-reading
   thirty `two-prices` findings found **ten** that were two rows identical but
   for a note reading `Gross Charge Type: Sta` against `Gross Charge Type:
-  Fee` — a 33% false-positive rate, from one unrecognised column. Recognising
+  Fee`: a 33% false-positive rate, from one unrecognised column. Recognising
   notes as qualifiers took the count on the same files from **91,760 to
   5,221**, and a re-audit of the survivors found 22 of 22 correct.
 - **`drug_unit_of_measurement` holds an amount and `drug_type_of_measurement`
@@ -620,11 +620,11 @@ Everything below was found by the earlier runs, in the same way.
   1357.2 and 8".
 - **A percentage was compared against a cash price.** Where a file leaves its
   negotiated dollar column empty throughout, the nearest remaining price was
-  the discounted cash price — and a gross charge times a negotiated percentage
+  the discounted cash price, and a gross charge times a negotiated percentage
   has no reason to equal one. A percentage now pairs only with a column that
   is its own name with the last word changed, or declines to run.
 - **`unit-mismatch` reported every multi-currency price list.** It ignored the
-  qualifier columns — region, plan, payer — that legitimately separate the
+  qualifier columns (region, plan, payer) that legitimately separate the
   rows. A price list quoting one product in GBP for the UK and EUR for the EU
   is a normal document.
 - **One unusable column aborted an entire check.** A wide file can carry
@@ -635,7 +635,7 @@ Everything below was found by the earlier runs, in the same way.
 - **A malformed `.xlsx` raised a `KeyError` out of `zipfile`** instead of the
   message saying what the tool reads.
 - **The volume-tier finding said "per unit"** when the column it used was not
-  a unit price — something the document does not state either way.
+  a unit price, something the document does not state either way.
 - **The zero-band note missed exactly the case that needed it.** It tested the
   rate plus its adjuster, so a band printed at `0` with an adjuster of `-1.4`
   summed to `-1.4` and carried no note. It now tests the printed rate.
@@ -653,13 +653,13 @@ commissioned specifically to break the tool's stated promises. It broke two.
   is the most important promise in the tool and it had a hole in it.
 - **The offline guard could be walked past using only allowlisted modules.**
   The allowlist held the top-level package `xml`, and `xml.sax.parse(url,
-  handler)` resolves a system id through `urllib.request.urlopen` — a working
+  handler)` resolves a system id through `urllib.request.urlopen`: a working
   exfiltration path with no socket, no subprocess and no dynamic import
   anywhere in the source. Separately, `zipfile` does `import os`, so
   `zipfile.os` is the real `os` module, and
   `getattr(getattr(zipfile, "o"+"s"), "sys"+"tem")(command)` spawned a shell
-  with the whole suite green. The allowlist is now dotted — `xml.etree` and
-  nothing else under `xml` — every module name an allowed module re-exports is
+  with the whole suite green. The allowlist is now dotted (`xml.etree` and
+  nothing else under `xml`). Every module name an allowed module re-exports is
   refused as an attribute, and `getattr` is refused outright. Both proofs of
   concept are regression tests.
 
@@ -670,7 +670,7 @@ Four more, none of which the tests would have caught:
   `zlib.error`, which is neither an `OSError` nor a `zipfile.BadZipFile`.
 - **`stated-discount` reported a contradiction in a consistent file.** With
   two columns both naming a list price, it bound to the nearer name and
-  flagged a row that reconciled perfectly against the other one — and
+  flagged a row that reconciled perfectly against the other one, and
   reordering the two columns made the finding vanish. Every candidate pairing
   is now tried, and a finding needs all of them to fail.
 - **`two-prices` asserted "no other column in this table tells the two rows
@@ -690,7 +690,7 @@ role anywhere is inferred from a column's contents.
 
 Stated plainly, because a checking tool that hides its blind spots is worse
 than none. The long version is
-[`docs/limitations.md`](docs/limitations.md).
+[`docs/limitations.md`](https://github.com/Waiga/adds-up/blob/main/docs/limitations.md).
 
 - **Nothing about margin, ever.** A price list does not state a cost.
 - **Two of the seven checks, and half of a third, are unmeasured.**
@@ -698,7 +698,7 @@ than none. The long version is
   across the 173 hospital CSVs a column naming a bundle's contents appears
   **zero times**, and so does a quantity column, and nothing else found in this work
   publishes either in a machine-readable price list. The **currency** half of
-  `unit-mismatch` is in the same position — no currency column appears in
+  `unit-mismatch` is in the same position: no currency column appears in
   either corpus, and the transit fares collected specifically to supply one
   turned out never to carry two currencies in a feed. All three may be wrong
   in ways nobody has seen.
@@ -733,7 +733,7 @@ than none. The long version is
 - **It cannot tell a unit price from a line total.** Where no column names a
   unit price it uses the net price and says so in the finding.
 - **It holds the whole table in memory.** The largest published file in the
-  corpus — 1,083 MB of CSV, 93,954 rows of 285 columns — needs about **3.9 GB
+  corpus (1,083 MB of CSV, 93,954 rows of 285 columns) needs about **3.9 GB
   and 44 seconds** on its own, on the machine these numbers were taken on
   (macOS, CPython 3.14). That is roughly four times the file size. Across the
   whole 200-file run, peak resident memory reached about **8.9 GB**, and **6.9
@@ -772,14 +772,14 @@ python3 tools/probe_gtfs.py --feeds 140
 ```
 
 **Two exceptions, both flagged rather than glossed.** The survey of open data
-portals — 3,802 URLs, 43 price-list titles, a 1.7% true-positive rate — was a
+portals (3,802 URLs, 43 price-list titles, a 1.7% true-positive rate) was a
 one-off reconnaissance across six portals whose APIs differ and whose result
 sets are capped by relevance. No script reproduces it; the API forms are
 published so it can be repeated by hand.
 
-The second is the per-file arithmetic in the hospital audit — Collingsworth's
+The second is the per-file arithmetic in the hospital audit (Collingsworth's
 11,230, Sky Lakes' 1,517 inversions and 352 unit findings, Kula's 17,
-Nazareth's ratio spread, Vibra's 120,698 — which was done by hand while
+Nazareth's ratio spread, Vibra's 120,698), which was done by hand while
 reading each finding back against its file, not by a script in `tools/`. Each
 is one pass over one named file and each is stated as the operation that
 produced it: for Sky Lakes, count the rows whose cell count differs from the
@@ -797,15 +797,15 @@ same is true of the 22 refused percentage columns.
 Neither corpus is redistributed here. The tariff export is 195 MB and public
 domain; the hospital files are republished constantly and belong to the
 hospitals that publish them. What is published is the measurements, the
-selection rules, and — in
-[`docs/hospital-corpus.csv`](docs/hospital-corpus.csv) — the SHA-256 of every
+selection rules, and (in
+[`docs/hospital-corpus.csv`](https://github.com/Waiga/adds-up/blob/main/docs/hospital-corpus.csv)) the SHA-256 of every
 one of the 200 hospital files, beside its certification number, facility name
 and URL. That file is a bibliography: no price, no charge, no row of anyone's
 chargemaster, no personal data.
 
 A corpus that was collected and then **rejected** is in the manifest too:
 1,174,347 published transit fares across 140 GTFS feeds, in which `fare_id` is
-a primary key and no feed uses more than one currency — so the two checks it
+a primary key and no feed uses more than one currency, so the two checks it
 was collected for cannot fire on it even in principle. Twelve currencies
 appear across those feeds, and never two in one.
 
