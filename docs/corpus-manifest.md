@@ -9,7 +9,7 @@ checks. Both are named with what they can and cannot measure.
 
 ---
 
-## Corpus 1 — published utility tariffs
+## Corpus 1: published utility tariffs
 
 **What it is for.** The volume-tier check, at scale. A utility tariff's rate
 structure is a volume price list: buy up to *this* many units, pay *this* per
@@ -34,8 +34,8 @@ Laboratory for the U.S. Department of Energy. No key, no account.
 **Records in the export.** 58,920 rate records in 737 columns, from 2,938
 utilities. Those four figures are printed by `tools/measure_corpus.py` under
 `corpus.export`, counted from the file itself rather than from the price lists
-derived from it — for a while a field named `records_in_export` held 18,049,
-which is the number of *tariffs with a multi-tier rate structure*, and a
+derived from it. For a while a field named `records_in_export` held 18,049,
+which is the number of *tariffs with a multi-tier rate structure*, so a
 stranger re-running would have got a figure 3.3 times smaller than this
 document's under the same name.
 
@@ -49,14 +49,14 @@ by **2,062 utilities**, holding **75,969 tier rows** in total. 12,324 of the
 price lists come from a tariff with no end date, so are current.
 
 58,387 of the 58,920 records carry a `source` field naming the utility's own
-published rate schedule — a PDF or a tariff page — so a row can be traced back
+published rate schedule, a PDF or a tariff page, so a row can be traced back
 to the document it was transcribed from.
 
 **The reshape, and why it is the largest limitation of this corpus.** URDB
 stores a tier table across up to 6 periods × 24 tiers of wide columns. The
 measurement script writes each period's tiers out as rows, keeping URDB's own
 field names: `tier`, `max`, `rate`, `adj`, `unit`. Values are copied
-unmodified — nothing is corrected, rounded or reformatted.
+unmodified. Nothing is corrected, rounded or reformatted.
 
 But it means **every document in this corpus arrives with the same five column
 names**, so the column-recognition step is exercised once rather than 29,521
@@ -96,12 +96,12 @@ cannot run against it at all, and the measurement records that as six
 
 ---
 
-## Corpus 2 — US hospital standard-charges files
+## Corpus 2: US hospital standard-charges files
 
 **What it is for.** Everything corpus 1 cannot reach:
 `stated-discount`, `two-prices`, `inverted-range` and `unit-mismatch`. Also,
 and just as importantly, **column recognition against headers this project did
-not write** — measured at **8,519 distinct column names** across the 173 CSVs
+not write**, measured at **8,519 distinct column names** across the 173 CSVs
 in it, from files authored independently by different hospitals and different
 vendors. The other 27 files are JSON documents named `.csv` and the tool
 refuses them by name; they contribute no column names to that figure.
@@ -116,14 +116,14 @@ is the one thing from this corpus that *is* committed here. 200 rows, 48 kB:
 the CMS certification number, the state, the facility name, the exact URL, the
 size of the CSV as analysed, the size as downloaded, and the **SHA-256 of each
 CSV**. Those 200 hashes are the checksum for this corpus. 199 of the numbers
-are distinct — one appears twice, for two locations of one certified provider.
+are distinct. One appears twice, for two locations of one certified provider.
 
 **It is a bibliography, and deliberately nothing more.** It carries no price,
 no charge, no row of any hospital's file, and no personal data of any kind:
 every field in it is a public federal identifier, a facility name, or a URL
 that 45 CFR 180.50 requires to be published and downloadable. The files
 themselves are not redistributed here. That is the same choice made for the
-tariff corpus and for the transit feeds — cite the source, publish the
+tariff corpus and for the transit feeds: cite the source, publish the
 measurement, leave the documents where their publishers put them.
 
 You very likely do not have the same files: hospitals republish these
@@ -149,7 +149,7 @@ hospital name and a direct `file_url`. Retrieved 9 September 2026. That index
 is a third-party project (Apache-2.0), not a government publication, and it is
 **not current**: it was last refreshed in January 2026.
 
-Of the 865 index rows the collection actually reached, **260 — 30% — did not
+Of the 865 index rows the collection actually reached, **260, or 30%, did not
 answer a `HEAD` request at all**. That counter counts any failure: a timeout
 and a TLS error along with a genuine 404. Collection stops at the target
 count, so only a sixth of the 5,023 rows were ever tried, and 30% is a rate
@@ -159,7 +159,7 @@ over what was tried rather than over the index.
 in that order. A row is kept when all of the following hold:
 
 1. a `HEAD` request returns a status and a non-zero `Content-Length`;
-2. that length is **under 40 MB** — this is the size of the *download*, and
+2. that length is **under 40 MB**, which is the size of the *download*, and
    many hospitals publish a zip, so a file that passes the cap at 2.7 MB can
    unpack to 83 MB of CSV. The largest file in the collected corpus is
    **1,083 MB** of CSV from a download well under the cap;
@@ -176,7 +176,7 @@ Those 27 files stay in the corpus and are counted in the file totals here.
 **The tool now refuses them by name**, saying the file is a JSON document and
 not a table, and that changed the column figures the run reports. When it read
 them as tables, the run reported 6,852,483 columns and 661,590 distinct column
-names, of which only 13,979 and 8,519 came from a CSV — 99.8% of the columns
+names, of which only 13,979 and 8,519 came from a CSV. 99.8% of the columns
 and 98.7% of the names were JSON punctuation. The current run reports **13,979 columns and
 8,519 distinct column names**, which are the 173 real CSVs and nothing else.
 8,519 is the figure this corpus was collected for. The run exited `2` on all
@@ -187,13 +187,13 @@ quoted for the real one.
 Collection stops at the target count. Everything rejected is counted by
 reason, in `_index.json`. For the 200 files these numbers come from, the
 counts were: 5,023 index rows, of which 865 were reached before the target was
-met — 605 answered a `HEAD`, 260 did not; of the 605, 226 were over the cap and
-106 declared no length; 53 downloaded but were not CMS-template files, 1
+met. 605 of those answered a `HEAD` and 260 did not; of the 605, 226 were over
+the cap and 106 declared no length; 53 downloaded but were not CMS-template files, 1
 download failed, and 200 were kept.
 
 The file is named `<n>-<ccn>-<basename>.csv` whatever the URL called it. An
 earlier version took the extension from the URL, so 38 of 200 files were named
-`.aspx`, `.php`, `.json`, `.CSV` or nothing at all — and the measurement
+`.aspx`, `.php`, `.json`, `.CSV` or nothing at all, and the measurement
 matched `*.csv` and silently measured 162 of them.
 
 **What is not measured about the bias.** Nothing in `_index.json` records a
@@ -206,13 +206,13 @@ because that is what it is.
 standard-charges files run to hundreds of megabytes, and a hospital that
 publishes an uncompressed file is more likely to be excluded than one that
 zips the same content. The corpus therefore over-represents smaller hospitals
-— behavioural health units, critical-access hospitals, single-site facilities
-— with shorter chargemasters and fewer payer contracts, and it
+(behavioural health units, critical-access hospitals, single-site facilities)
+with shorter chargemasters and fewer payer contracts, and it
 under-represents any large system that publishes raw CSV.
 
 It does not exclude large files altogether: the zip exception lets several
 hundred-megabyte documents through. The 200 files collected hold **9.28 GB of
-CSV** — a median of **6.89 MB**, a maximum of **1,083 MB** — from downloads
+CSV**, a median of **6.89 MB** and a maximum of **1,083 MB**, from downloads
 whose median was **5.87 MB**. That spread is useful, and it is what produced
 the tool's memory and timing numbers, but it fell out of the rule rather than
 being what the rule was designed to give. Every one of those figures is in
@@ -251,7 +251,7 @@ the URLs and hashes needed to obtain the same files.
 
 **No patient data.** These files describe prices for procedures, not people.
 Before any of this was published the corpus was scanned for personal data;
-what it contains is facility-level information only — hospital name, address,
+what it contains is facility-level information only: hospital name, address,
 NPI, the name of the person attesting to the file. Nothing from any hospital
 file is quoted in this repository beyond column names and a handful of prices.
 
@@ -278,13 +278,13 @@ Polish, French, Italian, Dutch, German and Slovak.
 
 | portal | working API form |
 |---|---|
-| data.gov | `https://catalog.data.gov/search?q=…` with `Accept: application/json` — **the CKAN API at `/api/3/action/*` is gone**, every action 404s |
+| data.gov | `https://catalog.data.gov/search?q=…` with `Accept: application/json`. **The CKAN API at `/api/3/action/*` is gone**, every action 404s |
 | data.gov.uk | `https://ckan.publishing.service.gov.uk/api/3/action/package_search` (the `data.gov.uk` path 301s here) |
 | open.canada.ca | `https://open.canada.ca/data/api/3/action/package_search` |
 | data.gov.au | `https://data.gov.au/data/api/3/action/package_search` |
 | Socrata | `http://api.us.socrata.com/api/catalog/v1?q=…` |
 | data.europa.eu | `https://data.europa.eu/api/hub/search/search?q=…` |
-| GSA CALC | **gone** — `calc.gsa.gov/api/rates/` 404s, `api.calc.gsa.gov` does not resolve, and `buy.gsa.gov` is behind single sign-on. There is no public contract labour-rate API today. |
+| GSA CALC | **gone**. `calc.gsa.gov/api/rates/` 404s, `api.calc.gsa.gov` does not resolve, and `buy.gsa.gov` is behind single sign-on. There is no public contract labour-rate API today. |
 
 **These figures came from a one-off reconnaissance and no script in `tools/`
 reproduces them.** That is a deliberate exception to this repository's rule
@@ -292,15 +292,15 @@ that every published number has a producing script, and it is flagged here
 rather than glossed: the survey was a search of six portals whose APIs differ,
 whose result sets are capped by relevance, and which change; scripting it
 would produce a number that drifts without meaning anything. The API forms
-above are given so the search can be repeated by hand, and the conclusion —
-that these portals do not hold 500 independent price lists — is what the
+above are given so the search can be repeated by hand, and the conclusion,
+that these portals do not hold 500 independent price lists, is what the
 figures are for.
 
 Twelve terms across six portals gave **3,802 unique CSV or XLSX download
 URLs**. Of those, **43** have a title that names a price list or a fee
 schedule. A random sample of 180 was downloaded and its headers read: 25 could
 not be fetched, and of the 54 that parsed as CSV, **three** were genuinely
-price lists — **a true-positive rate of about 1.7% for naive keyword
+price lists, giving **a true-positive rate of about 1.7% for naive keyword
 harvesting**.
 
 The word does not mean the thing. *Tariff* returns surveys about the business
@@ -319,7 +319,7 @@ municipal fee schedules make up most of the rest.
 **So: 500+ price-list *files* can be assembled from data.europa.eu alone. 500
 price lists from 500 independent publishers cannot.** Four genuine ones were
 checked against this tool's own class of question and behaved exactly as it
-would want — a Campania public-works price book in which base price plus
+would want: a Campania public-works price book in which base price plus
 overheads plus profit equals the final price in 12,708 of 12,708 parseable
 rows, and a Polish developer price list in which area times price per square
 metre equals the price in 99 of 99, but only against the correct one of its
@@ -338,7 +338,7 @@ qualifier as the most likely cause of a wrong finding on your file.
 
 **GTFS fare tables**, from the Mobility Database catalogue. Published transit
 fares are real price data, free and machine-readable, spread across many
-currencies — which made this look like the one available source that could
+currencies, which made this look like the one available source that could
 exercise `unit-mismatch` on a currency rather than on a unit.
 
 **Source.**
@@ -365,8 +365,8 @@ not depend on which day the feeds were fetched.
 counting redirected entries, across 87 countries.
 
 **Licence.** Mixed, and mostly absent: of the 1,977 feeds, **1,183 state no
-licence at all** in the catalogue. The rest point at their own agency's terms
-— Spain's national access point (111), Trafiklab (57), the UK Open Government
+licence at all** in the catalogue. The rest point at their own agency's terms:
+Spain's national access point (111), Trafiklab (57), the UK Open Government
 Licence (38), BC Transit (31), Estonia's ministry (23) and a long tail. No
 feed is redistributed here and none was kept; the probe reads each one in
 memory and discards it.
@@ -383,7 +383,7 @@ The reason the corpus fails is structural, and it is worth recording:
 | | |
 |---|---|
 | feeds tried, at seed 11, until 140 held a fare table | 345 |
-| — unreachable | 65 |
+| of those, unreachable | 65 |
 | **feeds with a `fare_attributes.txt`** | **140** |
 | fare rows in them | 1,174,347 |
 | distinct currencies across those feeds | 12 |
@@ -391,8 +391,8 @@ The reason the corpus fails is structural, and it is worth recording:
 | feeds carrying more than one currency | **0** |
 | feeds using the GTFS-Fares v2 `fare_products.txt` | 8 |
 
-Twelve currencies appear across the sample — USD, EUR, CAD, JPY, BRL, PEN,
-INR, CDF, MDL, RWF, RON, RSD — and **never two of them in one feed**, which is
+Twelve currencies appear across the sample (USD, EUR, CAD, JPY, BRL, PEN,
+INR, CDF, MDL, RWF, RON, RSD), and **never two of them in one feed**, which is
 the whole of the problem.
 
 `fare_id` is a primary key in the GTFS specification, so the same fare can
@@ -423,12 +423,12 @@ after those were fixed. The second column gives the current draw.
 | Check | Corpus | Sample | What was read |
 |---|---|---|---|
 | volume-tier | tariffs | 30 findings, seed 11, one per tariff | the tier table's own printed rates and adjusters |
-| stated-discount | hospitals | **16** — all 16 documents with a finding (was 17) | the gross, percentage and dollar printed on that row |
+| stated-discount | hospitals | **16**, all 16 documents with a finding (was 17) | the gross, percentage and dollar printed on that row |
 | two-prices | hospitals | **30** of 52 documents, **plus 2 each from the 2 largest the draw missed** | the two rows, and every column that might tell them apart |
-| inverted-range | hospitals | **4** — all 4 documents with a finding (was 5) | the row's own printed minimum and maximum |
-| unit-mismatch | hospitals | **12** — all 12 documents with a finding (was 14) | the rows, and the unit printed on each |
-| discount-tier | — | — | **no corpus exercises it** |
-| bundle-above-parts | — | — | **no corpus exercises it** |
+| inverted-range | hospitals | **4**, all 4 documents with a finding (was 5) | the row's own printed minimum and maximum |
+| unit-mismatch | hospitals | **12**, all 12 documents with a finding (was 14) | the rows, and the unit printed on each |
+| discount-tier | none | none | **no corpus exercises it** |
+| bundle-above-parts | none | none | **no corpus exercises it** |
 
 **The extra `two-prices` reads are there because one finding per document is
 the wrong sample when one document makes most of the findings.** The 30 drawn
@@ -462,11 +462,11 @@ with `csv.reader`, and prints every column in which the two rows differ:
 python3 tools/audit_hospital.py corpus/ hospital-audit.json
 ```
 
-For the two checks that state a *pair* of rows, it sorts each finding into
-`agree` — the two rows hold the same value in every column the tool could read
-— `derived`, where they differ only in figures computed from the price itself,
-and `distinguished`, where a column the tool has no name for holds different
-values and the document may well be separating the two rows.
+For the two checks that state a *pair* of rows, it sorts each finding into three
+groups: `agree`, where the two rows hold the same value in every column the
+tool could read; `derived`, where they differ only in figures computed from
+the price itself; and `distinguished`, where a column the tool has no name for
+holds different values and the document may well be separating the two rows.
 
 For the two that state a *single* row, it goes back to that row and confirms
 the values the finding quotes are cells in it. That is not the computation the
@@ -477,5 +477,5 @@ whether the finding describes the document.
 difference *matters* is the judgement, and it is made by a person looking at
 what the script prints. That is what caught the ten findings in the first
 audit whose two rows were identical but for a note reading `Gross Charge Type:
-Sta` against `Gross Charge Type: Fee` — the script reported the difference; a
+Sta` against `Gross Charge Type: Fee`. The script reported the difference; a
 person decided it was a real one.
