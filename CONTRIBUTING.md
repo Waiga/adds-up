@@ -13,7 +13,7 @@ PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -v
 No dependencies, and `pyproject.toml` says `dependencies = []`. A test asserts
 that, because the offline guard only reads this package's source and that is
 only good enough while there is nothing else in the install to read. If you
-need a library, expect to be asked whether the stdlib can do it — the `.xlsx`
+need a library, expect to be asked whether the stdlib can do it. The `.xlsx`
 reader is `zipfile` and `xml.etree` for exactly this reason.
 
 ## Change standard
@@ -33,7 +33,7 @@ reader is `zipfile` and `xml.etree` for exactly this reason.
 wrong, high, low, fair, competitive or profitable. Every finding is a statement
 about two numbers printed in the same document. `tests/test_checks.py` runs a
 file that produces findings from four checks at once and fails if any of
-seventeen forbidden words appears in one — *should*, *wrong*, *error*,
+seventeen forbidden words appears in one: *should*, *wrong*, *error*,
 *margin*, *profit*, *overpriced*, *recommend* among them. A change that needs one of those words is a
 change to the tool's purpose, and belongs in an issue first.
 
@@ -79,7 +79,7 @@ Harder, and the bar is the same as the existing seven:
 - It states what two rows say, and passes no judgement on either.
 - It declares the roles it needs and does not run without them.
 - It can be measured against a real corpus, or the README says plainly that it
-  cannot — as it currently does for two of the seven checks and for half of a
+  cannot, as it currently does for two of the seven checks and for half of a
   third.
 
 ## Reporting a wrong finding
@@ -90,7 +90,7 @@ the order they were measured, are a qualifier column the vocabulary does not
 know, a row carrying more cells than the header, a percentage column holding a
 fraction, and a unit compared case-sensitively. The last three were found by
 hand-reading 66 real findings back against their files, and all three are now
-fixed — a ragged row is not read, a percentage column that could be either
+fixed. A ragged row is not read, a percentage column that could be either
 writing is refused, and a unit is folded like the item beside it. The first
 remains open and is a one-line fix with a test.
 

@@ -1,7 +1,7 @@
 # Examples
 
-Four small files. Every one is invented — no customer, supplier or real
-company appears in this repository — and each exists to show one thing.
+Four small files. Every one is invented, because no customer, supplier or real
+company appears in this repository, and each exists to show one thing.
 
 Rebuild the workbook with `python3 make_examples.py`. It writes the `.xlsx`
 with `zipfile` and no dependencies, which is also how the tool reads it.
@@ -31,7 +31,7 @@ because it was not made.
 including which reading it took of the numbers in it. If a finding looks
 wrong, this is where the cause usually is.
 
-**`consistent.csv` exits 0 and says what that means** — "a statement about the
+**`consistent.csv` exits 0 and says what that means**, printing "a statement about the
 checks that ran, listed above, and about nothing else". It does not say the
 price list is fine. Note the comparison count beside it: exit 0 is earned by
 arithmetic having happened, not by checks having reported that they ran.

@@ -22,7 +22,7 @@ price list states none of them.
 
 **In particular, nothing here is about margin.** A price list does not state a
 cost, so the tool has no way to compute a margin and does not try. That is a
-boundary, not an omission — a tool that guessed at cost in order to say
+boundary, not an omission. A tool that guessed at cost in order to say
 something about margin would be worse than one that says nothing.
 
 ## A finding is not a defect
@@ -33,8 +33,8 @@ The tool reports that two statements in a document cannot both describe a
 single consistent price. It does not know which of them is wrong, or whether
 either is. Both may be exactly as intended.
 
-The clearest case is the volume-tier check. **Inclining block pricing —
-charging more per unit as consumption rises — is a deliberate and ubiquitous
+The clearest case is the volume-tier check. **Inclining block pricing,
+charging more per unit as consumption rises, is a deliberate and ubiquitous
 design in utility tariffs**. Thirty volume-tier findings from a corpus of
 29,521 published tariffs were read by hand: all thirty were arithmetically
 correct, and twenty-nine of the thirty were not mistakes. The check reports
@@ -60,8 +60,8 @@ so does a run in which the only check able to run was `unit-mismatch`, which
 compares text and never numbers.
 
 That last case is not hypothetical. A review handed the tool a price list with
-a genuine inverted tier whose price column was headed *Tariff amount payable*
-— a name the vocabulary does not know. No arithmetic check could run.
+a genuine inverted tier whose price column was headed *Tariff amount payable*,
+a name the vocabulary does not know. No arithmetic check could run.
 `unit-mismatch` found the item and unit columns, reported that it had run,
 found the units consistent, and the tool exited `0`. It now exits `2` and says
 so.
@@ -91,7 +91,7 @@ which ten of thirty findings were pairs of rows identical but for a note
 reading `Gross Charge Type: Sta` against `Gross Charge Type: Fee`.
 
 **It has a cost, and the cost falls the other way.** A genuine duplicate whose
-notes differ trivially — a difference of capitalisation, a stray space — is
+notes differ trivially (a difference of capitalisation, a stray space) is
 now silent. That is the right direction for a tool whose findings are
 accusations, but it is a real loss of sensitivity and not a free win.
 
@@ -147,8 +147,8 @@ not a row with a maximum of zero.
 **Precision comes from the printing.** The tolerance in the discount check is
 half of the last printed digit on each input, propagated through the
 multiplication. So `33.33%` off `100.00` reconciles with `66.67`. A document
-that prints a discount as a whole number gives a wide tolerance — `15` on a
-list price of `100.00` allows anything from `84.50` to `85.50` — and the check
+that prints a discount as a whole number gives a wide tolerance. `15` on a
+list price of `100.00` allows anything from `84.50` to `85.50`, so the check
 is correspondingly less sensitive on such a file. The allowance is printed
 with every finding.
 
@@ -165,16 +165,16 @@ hundred payer columns and a systematic inconsistency produces tens of
 thousands of findings, and the tool prints all of them. On a file that size,
 use `--format json` and query it, or `--skip` the check that is dominating.
 
-That is a deliberate choice — truncating would mean the output no longer
-matched the exit code — but it does mean the text report is for a document a
+That is a deliberate choice, because truncating would mean the output no
+longer matched the exit code. It does mean the text report is for a document a
 person could read, not for a chargemaster.
 
 ## What it does not read
 
 **PDF.** A price list in a PDF is a page of positioned glyphs, and
 reconstructing rows and columns from it is a separate problem with its own
-error rate. Every finding would then carry two uncertainties — did the
-document contradict itself, and did the extractor read it correctly — with no
+error rate. Every finding would then carry two uncertainties (did the
+document contradict itself, and did the extractor read it correctly) with no
 way to tell which one you were looking at. The tool says it does not read
 PDFs rather than reading them badly.
 
@@ -223,9 +223,9 @@ benchmark, no index.
   A row is judged against the header **line** and not against the headings
   that have names, because published files break both ways. One ends its
   header line in a comma, giving 25 headings of which the last is empty above
-  1,444,617 rows of 24 cells — so a row need not reach an unnamed column.
+  1,444,617 rows of 24 cells, so a row need not reach an unnamed column.
   Another ends its header line in three commas and puts a value in the last of
-  the columns those commas open — so the unnamed columns cannot be dropped
+  the columns those commas open, so the unnamed columns cannot be dropped
   either. A row that fails to reach a *named* column is set aside; 2 rows in
   the whole corpus did.
 
@@ -237,7 +237,7 @@ benchmark, no index.
 - **A percentage column of fractions is refused, not read either way.** The
   CMS schema means 85% by `85`, and some hospitals write `0.85`. Nothing in a
   column whose every value lies between 0 and 1 distinguishes the two, so the
-  column is refused and `stated-discount` does not run on it — the same
+  column is refused and `stated-discount` does not run on it, the same
   answer the number reader gives an undecidable thousands separator. It is
   decidable in two ways, and both are the document speaking: a cell printing a
   `%` sign, or a cell holding more than 1, which a fraction of a price is not.
@@ -245,7 +245,7 @@ benchmark, no index.
   prices something above the gross charge puts a value over 1 in the column
   and is read as percentages. And a refusal is a real loss, measured: one
   published file fell from 120,673 findings to 29,485, and the 91,188 it lost
-  came from columns holding `0.8` throughout — findings the hand audit had
+  came from columns holding `0.8` throughout, findings the hand audit had
   judged *correct*, because that file's negotiated dollar holds the gross
   charge on 120,698 of its 120,728 rows, so the rows contradict themselves
   under either reading. The tool no longer says so.
@@ -284,7 +284,7 @@ reaches the network with no socket call in this package's own source. That is
 a real gap, and it is written down here rather than left to be discovered.
 
 It is also a static read, not a sandbox. It does not run the code, and it
-cannot see what a dependency does — which is only safe because there are none.
+cannot see what a dependency does, which is only safe because there are none.
 Refusing `getattr` closes the obvious route to a name assembled at runtime,
 but not every route: a construction nobody has thought of is by definition not
 on the list, and this guard makes the offline promise expensive to break by

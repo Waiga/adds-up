@@ -1,4 +1,4 @@
-# adds-up — design
+# adds-up design
 
 9 September 2026.
 
@@ -14,8 +14,8 @@ profitable.
 **A price list does not state a cost.**
 
 That one sentence decides the whole scope. Every question a person actually
-wants to ask about a price list — is this profitable, is it competitive, is
-the discount too generous, should tier 3 be cheaper — needs at least one
+wants to ask about a price list (is this profitable, is it competitive, is
+the discount too generous, should tier 3 be cheaper) needs at least one
 number the document does not contain. A cost, a competitor's price, a volume
 forecast, a strategy.
 
@@ -29,7 +29,7 @@ own maximum.
 
 The test `NothingIsJudged` in `tests/test_checks.py` runs a file that produces
 findings from four checks at once and fails if any of seventeen words appears
-in one — *should*, *wrong*, *error*, *margin*, *profit*, *overpriced*,
+in one: *should*, *wrong*, *error*, *margin*, *profit*, *overpriced*,
 *recommend* among them. It is the only test in the suite that guards a value
 rather than a behaviour, and it is there because the temptation is constant.
 
@@ -60,7 +60,7 @@ ambiguous with both candidates named, and `--map` settles it.
 rest of the table.** A column called `max` is the top of a volume band in a
 tier table and the top of a price range in a rate sheet. Nothing inside the
 word decides it. The rule is that a bound is a range end only when a column
-naming the other end is present, and a quantity otherwise — and the report
+naming the other end is present, and a quantity otherwise. The report
 prints which reading it took and why. `from` and `to` are deliberately outside
 that rule: in every price list met while building this they name a band of
 quantity, and reading them as a price range would be wrong every time.
@@ -75,7 +75,7 @@ written for Germany. Staring at that cell does not settle it.
 
 So the convention is decided **once per column**, from the cells in that
 column that are unambiguous, and a column in which no cell is unambiguous is
-**refused** — the checks that needed it do not run, and the report says why.
+**refused**, so the checks that needed it do not run and the report says why.
 Guessing here does not produce one wrong number; it produces a confident
 finding about a contradiction that does not exist.
 
@@ -94,8 +94,8 @@ That one is refused, and it should be.
 
 **Precision is carried, not discarded.** `10.00` and `10` are the same number
 and not the same printed value. The tolerance in the discount check is derived
-from the precision the document itself prints — half of the last printed digit
-on each input, propagated through the multiplication — rather than from a
+from the precision the document itself prints, half of the last printed digit
+on each input propagated through the multiplication, rather than from a
 constant somebody picked. A number stored in an `.xlsx` gets its precision
 from the cell's number format, which is why the XLSX reader parses
 `styles.xml` at all.
@@ -107,15 +107,15 @@ from the cell's number format, which is why the XLSX reader parses
 A tabular file gives the tool a grid it did not have to reconstruct. A PDF
 price list gives it a page of positioned glyphs, and turning those back into
 rows and columns is a whole separate problem with its own error rate. Every
-finding would then carry two uncertainties — did the document contradict
-itself, and did the extractor read it correctly — with no way for a reader to
+finding would then carry two uncertainties (did the document contradict
+itself, and did the extractor read it correctly) with no way for a reader to
 tell which one they were looking at. That is a worse tool than one that says
 plainly that it does not read PDFs, so it says that, in the error message and
 in the README.
 
 XLSX is read with `zipfile` and `xml.etree`. An `.xlsx` is a zip of XML, only
 cell values and number formats are needed, and the package's offline guarantee
-is a static read of its own source — which is only worth anything because
+is a static read of its own source, which is only worth anything because
 there is nothing else in the install to read. A dependency would have cost
 that.
 
@@ -140,15 +140,15 @@ the other's findings, and running both on the same file is reasonable.
 
 Each is independently switchable, and the report always prints which ran and
 which did not, with the reason. A check that did not run must never read as a
-check that found nothing — that is why `ran` and `findings` are separate
+check that found nothing. That is why `ran` and `findings` are separate
 fields, and why the reason is mandatory.
 
 **And `ran` is not what exit 0 is gated on.** A `CheckRun` also carries the
 number of pairs of *numbers* it actually compared, and a run that compared
 none exits 2. The two are different, and an adversarial review found the gap
 between them: `unit-mismatch` needs no numbers at all, so a price list with a
-genuine inverted tier — whose price column had a heading the vocabulary did
-not know — exited 0 because the units were consistent. One check had "run".
+genuine inverted tier, whose price column had a heading the vocabulary did
+not know, exited 0 because the units were consistent. One check had "run".
 Nothing had been compared.
 
 | | needs | reports |
@@ -165,8 +165,8 @@ Nothing had been compared.
 
 **A percentage may only be compared with the price it is a percentage of.**
 Where a document holds several net-price columns, the percentage pairs only
-with the one that is its own name with the last word changed —
-`…|negotiated_percentage` with `…|negotiated_dollar` — unless there is exactly
+with the one that is its own name with the last word changed,
+`…|negotiated_percentage` with `…|negotiated_dollar`, unless there is exactly
 one candidate, in which case there is nothing to choose between. A published
 file puts a discounted cash price beside that pair, and a gross charge times a
 negotiated percentage has no reason whatever to equal a cash price. Where a
@@ -180,7 +180,7 @@ finding nothing, and the report keeps them apart.
 **A finding needs every candidate pairing to fail, not the nearest one.**
 Where two columns both name a list price, binding the percentage to the nearer
 name reported a contradiction in a row that reconciled perfectly against the
-other column — and swapping the two columns made the finding disappear. So
+other column, and swapping the two columns made the finding disappear. So
 every candidate list price is tried against every candidate net price, and a
 finding is reported only when none of them reconciles. The finding then names
 the pairing it quotes and says how many were tried.
@@ -192,11 +192,11 @@ document.
 
 **A percentage has two opposite readings and only its name tells them apart.**
 *20% off* and *pays 20% of* are contradictory instructions, and both are
-printed in real price lists — the second is how the US hospital
+printed in real price lists. The second is how the US hospital
 price-transparency schema states a negotiated rate. So there are two roles,
 `discount_percent` and `percent_of_list`, decided by the column's name.
 
-The alternative — try both readings and report only if neither reconciles —
+The alternative, to try both readings and report only if neither reconciles,
 was rejected. It cannot fail: a check that accepts whichever interpretation
 happens to fit will never find anything, which makes it a check in name only.
 
@@ -227,7 +227,7 @@ findings are accusations.
 **Qualifiers are part of an item's identity.** A price list that quotes one
 product in GBP for the UK and EUR for the EU is a normal document. So
 `two-prices` and `unit-mismatch` both hold every recognised qualifier column
-equal — region, customer, plan, date, size, variant — and report only where
+equal (region, customer, plan, date, size, variant) and report only where
 the document says two things about the *same* row identity. `unit-mismatch`
 did not do this at first and reported every multi-currency price list as
 broken.
@@ -252,7 +252,7 @@ will most want and the one the document cannot support. Said in the README as
 a boundary, not an apology.
 
 **Comparing prices between two files.** A second price list would answer real
-questions — what changed since last quarter, does the quote match the
+questions: what changed since last quarter, does the quote match the
 contract. It is a different tool: it needs a matching key between documents,
 and every finding then depends on whether the match was right. Not in 0.1.
 
@@ -273,7 +273,7 @@ price list legitimately spans four orders of magnitude.
 **Round-number detection** (`£100.00` beside `£97.43` and `£102.18`). An
 opinion about pricing psychology, not arithmetic.
 
-**Checking a total against the sum of its lines.** A real and useful check —
+**Checking a total against the sum of its lines.** A real and useful check,
 and it is `show-your-work`'s, which already does it against the formula that
 was supposed to compute it. Duplicating it here on values alone would be a
 worse version of an existing tool in the same portfolio.
@@ -285,14 +285,14 @@ role, because no role produces a check that did not run and says so, while a
 wrong role produces confident findings about the wrong two columns. `--map` is
 the answer to a typo.
 
-**An extended-price check** — does `quantity x unit price` equal the line
+**An extended-price check.** Does `quantity x unit price` equal the line
 total, does `area x price per square metre` equal the price. This is the most
 serious omission in 0.1 and it is left out for scope, not for principle: it is
 pure arithmetic on printed values, exactly like the seven, and the survey of
 open data portals found it live in the wild. A Campania public-works price
 book holds `base price + overheads + profit = final price` in 12,708 of 12,708
 parseable rows; a Polish developer price list, whose form is set by statute,
-holds `usable area x price per square metre = price` in 99 of 99 — and fails
+holds `usable area x price per square metre = price` in 99 of 99, and fails
 against its *other* area column, which is the interesting part. Any
 implementation would have to pick the right multiplicand and would need a role
 for a line total, distinct from a unit price, that the vocabulary does not yet
@@ -301,8 +301,8 @@ have.
 **Currency conversion.** Any check that needs a rate needs a number from
 outside the document, and a rate has a date.
 
-**A document-wide currency check** — "this file mixes GBP and EUR". Normal,
-and not a contradiction. Narrowed to one item priced in two currencies.
+**A document-wide currency check**, saying "this file mixes GBP and EUR".
+Normal, and not a contradiction. Narrowed to one item priced in two currencies.
 
 **Treating an inclining volume tier as an error.** It is not one. Inclining
 block pricing is deliberate and ubiquitous in residential utility tariffs. The
@@ -317,18 +317,18 @@ A published file often has a **title block above** the header. The CMS
 standard-charges template puts metadata names on row 1, metadata values on row
 2 and the real column names on row 3, and all three are header-shaped. Taking
 the *last* candidate handles that, and almost every file in the hospital
-corpus needs it — `measure_hospital.py` reports the distribution of the rows
+corpus needs it. `measure_hospital.py` reports the distribution of the rows
 actually chosen under `header_row_chosen`, and the README prints it.
 
-A price list just as often has a **sub-header below** — a units row, a
+A price list just as often has a **sub-header below**: a units row, a
 category banner, a second language. There the last candidate is the wrong one,
 and a review demonstrated one stealing the slot from the real header, which
 demoted three recognised columns to a title block.
 
 The rule is now: among the header-shaped rows with data under them, the one
 that names the most columns this tool recognises wins, and the last one only
-breaks a tie. The score is a function of *names* — it is the column vocabulary
-applied to a row — so it does not weaken the rule that a role comes from what
+breaks a tie. The score is a function of *names*, the column vocabulary
+applied to a row, so it does not weaken the rule that a role comes from what
 a column is called.
 
 ## Offline boundary
@@ -338,7 +338,7 @@ starts a process. `tests/test_offline.py` reads the package's own source and
 refuses one: imports are an allowlist of eleven modules, the process-launching
 parts of `os` are refused by name wherever they appear, the dynamic hatches
 are refused, and anything in the package that is not readable Python source
-fails the suite — because a compiled extension would be equally importable and
+fails the suite, because a compiled extension would be equally importable and
 contain nothing to parse.
 
 `os` is not on the allowlist at all. Nothing here writes a file, so the
@@ -348,7 +348,7 @@ exception `os` usually needs is not needed either.
 allowed the top-level package `xml`. `xml.sax.parse(url, handler)` resolves a
 system id through `urllib.request.urlopen`, so allowing `xml` allowed a
 working exfiltration path with no socket, no subprocess and no dynamic import
-anywhere in the source — and a review wrote it, dropped it into the package,
+anywhere in the source. A review wrote it, dropped it into the package,
 and watched the whole suite stay green. `xml.etree` is what this package uses
 and `xml.etree` is what it may have.
 
@@ -356,7 +356,7 @@ and `xml.etree` is what it may have.
 `import os`, so `zipfile.os` is the real `os` module and
 `getattr(getattr(zipfile, "o"+"s"), "sys"+"tem")(command)` spawns a shell with
 no forbidden name anywhere in the source: the attribute names are assembled
-from string fragments. Two things close it — every module name an allowed
+from string fragments. Two things close it. Every module name an allowed
 module re-exports is refused as an attribute, and `getattr` is refused
 outright, because this package has no legitimate use for it. Both proofs of
 concept are now tests.
@@ -387,8 +387,8 @@ found defects a green test suite did not.
 ## What the review changed
 
 Separately from the corpus, an adversarial review was commissioned to break
-the seven promises. It broke two — the exit-0 gate and the offline guard, both
-described above — and found four more defects a green suite had not:
+the seven promises. It broke two, the exit-0 gate and the offline guard, both
+described above, and found four more defects a green suite had not:
 
 - a corrupt `.xlsx` exited 1 rather than 2, because a zip's CRC failure
   arrives as `zlib.error`, which is neither `OSError` nor `zipfile.BadZipFile`;
