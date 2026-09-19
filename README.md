@@ -5,6 +5,10 @@ Reads a price list and reports the arithmetic in it that contradicts itself.
 Runs entirely on your machine. No account, no API key, no upload, no network
 call, no dependencies beyond Python itself.
 
+What it found across 29,521 real published tariffs, and the caveat that matters
+more than the finding, is written up in
+[Thirty correct findings, and only one looked like a mistake](https://medium.com/@aryawaiga0/thirty-correct-findings-and-only-one-looked-like-a-mistake-06b722abf816).
+
 ```
 $ adds-up examples/volume-tiers.csv
 adds-up 0.1.2 — examples/volume-tiers.csv
