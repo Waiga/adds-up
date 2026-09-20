@@ -45,7 +45,7 @@ def _width_lines(table) -> list[str]:
 
 
 def text(result: Result, version: str) -> str:
-    lines = [f"adds-up {version} — {result.path}", ""]
+    lines = [f"adds-up {version}: {result.path}", ""]
     for table in result.tables:
         if len(result.tables) > 1:
             lines.append(f"=== {table.sheet} ===")
@@ -86,12 +86,12 @@ def text(result: Result, version: str) -> str:
         for check in table.checks:
             if check.ran:
                 counted = (
-                    f"from {check.comparisons} comparison(s) "
+                    f" from {check.comparisons} comparison(s)"
                     if check.comparisons or check.name != "unit-mismatch" else ""
                 )
                 lines.append(
-                    f"  ran      {check.name:<20} {len(check.findings)} finding(s) "
-                    f"{counted}— {check.reason}"
+                    f"  ran      {check.name:<20} {len(check.findings)} finding(s)"
+                    f"{counted}: {check.reason}"
                 )
             else:
                 lines.append(f"  DID NOT RUN {check.name:<17} {check.reason}")
@@ -110,7 +110,7 @@ def text(result: Result, version: str) -> str:
 
         lines.append("COLUMNS")
         for column in table.columns:
-            role = column.role or "—"
+            role = column.role or "no role"
             lines.append(f"  {column.label!r:<34} {role:<18} {column.reason}")
             if column.index in table.conventions and column.role:
                 lines.append(f"  {'':<34} {'':<18} numbers: {table.conventions[column.index]}")
@@ -161,8 +161,8 @@ def markdown(result: Result, version: str) -> str:
         for check in table.checks:
             lines.append(
                 f"| {check.name} | {'yes' if check.ran else '**no**'} | "
-                f"{check.comparisons if check.ran else '—'} | "
-                f"{len(check.findings) if check.ran else '—'} | {check.reason} |"
+                f"{check.comparisons if check.ran else 'not run'} | "
+                f"{len(check.findings) if check.ran else 'not run'} | {check.reason} |"
             )
         lines.append("")
         lines.append("A check that did not run has found nothing because it was not made.")

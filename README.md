@@ -11,7 +11,7 @@ more than the finding, is written up in
 
 ```
 $ adds-up examples/volume-tiers.csv
-adds-up 0.1.2 — examples/volume-tiers.csv
+adds-up 0.1.3: examples/volume-tiers.csv
 
 6 row(s) under a header read from row 4, the only header-shaped row above the data with data under it; 3 row(s) above it were read as a title block.
 5 of 5 column(s) were given a role.
@@ -26,13 +26,13 @@ VOLUME-TIER
       at volume-tiers.csv!row 6, Unit price, volume-tiers.csv!row 7, Unit price
 
 CHECKS
-  ran      volume-tier          1 finding(s) from 4 comparison(s) — read 'Quantity' against 'Unit price'
+  ran      volume-tier          1 finding(s) from 4 comparison(s): read 'Quantity' against 'Unit price'
   DID NOT RUN discount-tier     no column names a discount percentage
   DID NOT RUN bundle-above-parts no column names the items a bundle is made of, so no composition is stated in this document
   DID NOT RUN stated-discount   no column names a list price
-  ran      two-prices           0 finding(s) from 0 comparison(s) — read 'SKU' against 'Unit price', holding 3 other column(s) equal
+  ran      two-prices           0 finding(s) from 0 comparison(s): read 'SKU' against 'Unit price', holding 3 other column(s) equal
   DID NOT RUN inverted-range    no column names the bottom of a range
-  ran      unit-mismatch        0 finding(s) — read 'Currency' against 'SKU', holding 2 other column(s) equal (compares text, not numbers)
+  ran      unit-mismatch        0 finding(s): read 'Currency' against 'SKU', holding 2 other column(s) equal (compares text, not numbers)
 
   A check that did not run has found nothing because it was not made.
 
