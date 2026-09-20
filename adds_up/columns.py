@@ -48,7 +48,7 @@ ROLES = (
 )
 
 ROLE_MEANING = {
-    "item": "what is being priced — a code, a SKU, a description",
+    "item": "what is being priced, such as a code, a SKU or a description",
     "quantity": "how many, or the top or bottom of a volume band",
     "unit_price": "the price of one unit",
     "list_price": "the price before any discount",
@@ -364,14 +364,14 @@ def vocabulary_lines() -> list[str]:
     for role in ROLES:
         if role == "qualifier":
             continue
-        lines.append(f"{role} — {ROLE_MEANING[role]}")
+        lines.append(f"{role}: {ROLE_MEANING[role]}")
         for name in sorted(EXACT.get(role, ())):
             lines.append(f"    {name}")
         endings = sorted(text for text, mapped in SUFFIX if mapped == role)
         for text in endings:
             lines.append(f"    ...ending in '{text}'")
         lines.append("")
-    lines.append(f"qualifier — {ROLE_MEANING['qualifier']}")
+    lines.append(f"qualifier: {ROLE_MEANING['qualifier']}")
     for name in sorted(QUALIFIER):
         lines.append(f"    {name}")
     return lines
