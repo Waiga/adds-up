@@ -818,3 +818,8 @@ appear across those feeds, and never two in one.
 MIT. See `LICENSE`.
 
 Nothing in this repository is pricing, commercial, legal or financial advice.
+
+## Elsewhere
+
+The rest of these tools, and the writing about what real files did to them, is at
+[waiga.github.io](https://waiga.github.io).
